@@ -74,6 +74,51 @@ Suggests some FPGA development boards that you can use for this book’s project
 
 Outlines strategies for finding an FPGA-related job, in case you want to pursue FPGA design professionally. I’ll make suggestions on how to build a good resume, prepare for interviews, and negotiate for the best-possible job offer.
 
+-----
+
+# Tarek's Notes...
+
+-----
+
+<!-- mtoc-start -->
+
+* [Getting Started with Open Source FPGA Tools](#getting-started-with-open-source-fpga-tools)
+  * [Why OSS CAD Suite?](#why-oss-cad-suite)
+  * [Installation](#installation)
+    * [1. Install openFPGALoader (for programming the FPGA)](#1-install-openfpgaloader-for-programming-the-fpga)
+    * [2. Download and Install OSS CAD Suite](#2-download-and-install-oss-cad-suite)
+    * [3. Activate the Toolchain](#3-activate-the-toolchain)
+    * [4. Verify Installation](#4-verify-installation)
+* [FPGA Development Workflow](#fpga-development-workflow)
+  * [Overview: Verilog → Bitstream → FPGA](#overview-verilog--bitstream--fpga)
+  * [Quick Start with Makefile](#quick-start-with-makefile)
+  * [Understanding Makefile Parameters](#understanding-makefile-parameters)
+    * [Why do we need both TOP and SRC?](#why-do-we-need-both-top-and-src)
+  * [Manual Workflow (for understanding)](#manual-workflow-for-understanding)
+    * [Step 1: Synthesis with Yosys](#step-1-synthesis-with-yosys)
+    * [Step 2: Place and Route with nextpnr-ice40](#step-2-place-and-route-with-nextpnr-ice40)
+    * [Step 3: Generate Bitstream with icepack](#step-3-generate-bitstream-with-icepack)
+    * [Step 4: Program the FPGA](#step-4-program-the-fpga)
+  * [Pin Constraints File](#pin-constraints-file)
+  * [Example: Building the Switches to LEDs Design](#example-building-the-switches-to-leds-design)
+* [Detailed Example: LED Toggle Project](#detailed-example-led-toggle-project)
+  * [Overview: What the Design Does](#overview-what-the-design-does)
+  * [Step-by-Step Build Process](#step-by-step-build-process)
+    * [1. Makefile Variable Resolution](#1-makefile-variable-resolution)
+    * [2. Stage 1: Synthesis with Yosys](#2-stage-1-synthesis-with-yosys)
+    * [3. Stage 2: Place and Route with nextpnr-ice40](#3-stage-2-place-and-route-with-nextpnr-ice40)
+    * [4. Stage 3: Bitstream Generation with icepack](#4-stage-3-bitstream-generation-with-icepack)
+    * [5. Stage 4: Programming with openFPGALoader](#5-stage-4-programming-with-openfpgaloader)
+  * [The Complete Flow Visualised](#the-complete-flow-visualised)
+  * [How the Makefile Orchestrates Dependencies](#how-the-makefile-orchestrates-dependencies)
+  * [Resource Utilisation](#resource-utilisation)
+  * [Testing Your Design](#testing-your-design)
+  * [Makefile Configuration](#makefile-configuration)
+  * [Key Points](#key-points)
+
+<!-- mtoc-end -->
+
+
 ## Getting Started with Open Source FPGA Tools
 
 ### Why OSS CAD Suite?
@@ -564,6 +609,50 @@ Device utilisation:
 ```
 
 The iCE40HX1K has 1,280 logic cells, and this simple design uses only 3!
+
+Let me explain how this is determined and where it comes from.
+
+```bash
+source ~/oss-cad-suite/environment && make clean && make TOP=LED_Toggle_Project
+      SRC=chapter04/LED_Toggle_Project.v 2>&1 | grep -A 10 "Device utilisation")
+  ⎿ Cleaning build artifacts...
+    rm -f *.json *.asc *.bin
+    find chapter* -type f \( -name "*.json" -o -name "*.asc" -o -name "*.bin" \) -delete
+     2>/dev/null || true
+    Clean complete
+    Info: Device utilisation:
+    Info:                ICESTORM_LC:       5/   1280     0%
+    Info:               ICESTORM_RAM:       0/     16     0%
+    Info:                      SB_IO:       3/    112     2%
+    Info:                      SB_GB:       1/      8    12%
+    Info:               ICESTORM_PLL:       0/      1     0%
+    Info:                SB_WARMBOOT:       0/      1     0%
+
+    Info: Placed 3 cells based on constraints.
+    Info: Creating initial analytic placement for 4 cells, random placement wirelen =
+    27.
+    Info:     at initial placer iter 0, wirelen = 2
+```
+
+The nextpnr-ice40 tool reports this during the place-and-route stage (Stage 2 of the
+build process). After it reads the JSON netlist from yosys, it analyzes what hardware
+resources your design needs.
+
+How nextpnr determines the numbers:
+
+1. Analyzes the netlist: nextpnr reads the *.json file from yosys which contains:
+  - All logic cells (LUTs, flip-flops)
+  - I/O pins needed
+  - Clock signals
+  - RAM blocks
+  - Special components (PLLs, etc.)
+2. Counts resource usage: It tallies up what the design requires
+3. Compares to device capacity: The iCE40HX1K has fixed resources:
+  - 1,280 logic cells (ICESTORM_LC) - each can be a LUT or flip-flop
+  - 112 I/O pins (SB_IO)
+  - 8 global clock buffers (SB_GB)
+  - 16 RAM blocks (ICESTORM_RAM)
+  - 1 PLL (ICESTORM_PLL)
 
 ### Testing Your Design
 
