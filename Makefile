@@ -17,11 +17,12 @@ PCF ?= Go_Board_Pin_Constraints.pcf
 DEVICE ?= hx1k
 PACKAGE ?= vq100
 
-# Derived filenames based on top module name
+# Derived filenames and paths
 PROJECT := $(shell echo $(TOP) | tr '[:upper:]' '[:lower:]' | tr '_' '-')
-JSON := $(PROJECT).json
-ASC := $(PROJECT).asc
-BIN := $(PROJECT).bin
+BUILD_DIR := $(dir $(SRC))
+JSON := $(BUILD_DIR)$(PROJECT).json
+ASC := $(BUILD_DIR)$(PROJECT).asc
+BIN := $(BUILD_DIR)$(PROJECT).bin
 
 # Tool configuration
 YOSYS := yosys
@@ -87,6 +88,7 @@ info:
 	@echo "FPGA Build Configuration:"
 	@echo "  Top Module:    $(TOP)"
 	@echo "  Source File:   $(SRC)"
+	@echo "  Build Dir:     $(BUILD_DIR)"
 	@echo "  Constraints:   $(PCF)"
 	@echo "  Device:        $(DEVICE)"
 	@echo "  Package:       $(PACKAGE)"
@@ -118,6 +120,7 @@ check-tools:
 clean:
 	@echo "Cleaning build artifacts..."
 	rm -f *.json *.asc *.bin
+	find chapter* -type f \( -name "*.json" -o -name "*.asc" -o -name "*.bin" \) -delete 2>/dev/null || true
 	@echo "Clean complete"
 
 # Help target
