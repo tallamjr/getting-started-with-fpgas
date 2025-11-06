@@ -2,20 +2,39 @@
 # Compiles Verilog to bitstream using the OSS CAD Suite open-source toolchain
 #
 # Usage:
-#   make                    # Build bitstream from default sources
-#   make TOP=mymodule       # Build specific module
-#   make SRC=path/to/file.v # Use different source file
-#   make program            # Program FPGA with openFPGALoader
-#   make clean              # Remove all build artifacts
+#   make TOP=Module SRC=path/to/file.v  # Build bitstream (TOP and SRC required)
+#   make program TOP=Module SRC=...     # Program FPGA (must specify same TOP/SRC)
+#   make clean                          # Remove all build artifacts
+#   make info TOP=Module SRC=...        # Show build configuration
+#   make check-tools                    # Verify toolchain installation
 
-# Configuration variables - override these on command line or modify defaults
-TOP ?= Switches_To_LEDs
-SRC ?= chapter02/Switches_To_LEDs.v
+# Configuration variables - MUST be specified on command line
+# Example: make TOP=Module_Name SRC=path/to/file.v
+TOP ?=
+SRC ?=
+
+# Board-specific defaults (GO Board)
 PCF ?= Go_Board_Pin_Constraints.pcf
-
-# FPGA device configuration for GO Board
 DEVICE ?= hx1k
 PACKAGE ?= vq100
+
+# Validation - ensure required variables are set (only for targets that need them)
+# Targets that don't need TOP/SRC: clean, help, check-tools
+# If MAKECMDGOALS is empty, default target (all) needs validation
+ifeq ($(MAKECMDGOALS),)
+  NEEDS_VALIDATION := true
+else
+  NEEDS_VALIDATION := $(filter-out clean help check-tools,$(MAKECMDGOALS))
+endif
+
+ifneq ($(NEEDS_VALIDATION),)
+  ifeq ($(TOP),)
+    $(error TOP module not specified. Usage: make TOP=Module_Name SRC=path/to/file.v)
+  endif
+  ifeq ($(SRC),)
+    $(error SRC file not specified. Usage: make TOP=Module_Name SRC=path/to/file.v)
+  endif
+endif
 
 # Derived filenames and paths
 PROJECT := $(shell echo $(TOP) | tr '[:upper:]' '[:lower:]' | tr '_' '-')
@@ -129,23 +148,26 @@ help:
 	@echo "iCE40 FPGA Makefile - Open Source Toolchain"
 	@echo ""
 	@echo "Targets:"
-	@echo "  make              Build bitstream from default sources"
-	@echo "  make program      Program FPGA with openFPGALoader"
-	@echo "  make clean        Remove all build artifacts"
-	@echo "  make info         Show current build configuration"
-	@echo "  make check-tools  Verify all required tools are installed"
-	@echo "  make help         Show this help message"
+	@echo "  make TOP=... SRC=...  Build bitstream (TOP and SRC required)"
+	@echo "  make program TOP=...  Program FPGA with openFPGALoader"
+	@echo "  make clean            Remove all build artifacts"
+	@echo "  make info TOP=...     Show current build configuration"
+	@echo "  make check-tools      Verify all required tools are installed"
+	@echo "  make help             Show this help message"
 	@echo ""
-	@echo "Configuration:"
-	@echo "  TOP=module_name   Specify top-level module (default: $(TOP))"
-	@echo "  SRC=file.v        Specify Verilog source file (default: $(SRC))"
-	@echo "  PCF=file.pcf      Specify pin constraints file (default: $(PCF))"
-	@echo "  DEVICE=device     Specify FPGA device (default: $(DEVICE))"
-	@echo "  PACKAGE=pkg       Specify package type (default: $(PACKAGE))"
+	@echo "Required Configuration:"
+	@echo "  TOP=module_name   Top-level module name (REQUIRED)"
+	@echo "  SRC=file.v        Verilog source file path (REQUIRED)"
+	@echo ""
+	@echo "Optional Configuration:"
+	@echo "  PCF=file.pcf      Pin constraints file (default: $(PCF))"
+	@echo "  DEVICE=device     FPGA device (default: $(DEVICE))"
+	@echo "  PACKAGE=pkg       Package type (default: $(PACKAGE))"
 	@echo ""
 	@echo "Examples:"
-	@echo "  make TOP=Blinker SRC=examples/blinker.v"
-	@echo "  make clean && make && make program"
+	@echo "  make TOP=Switches_To_LEDs SRC=chapter02/Switches_To_LEDs.v"
+	@echo "  make TOP=LED_Toggle_Project SRC=chapter04/LED_Toggle_Project.v"
+	@echo "  make program TOP=Switches_To_LEDs SRC=chapter02/Switches_To_LEDs.v"
 	@echo ""
 	@echo "Prerequisites:"
 	@echo "  - OSS CAD Suite installed in ~/oss-cad-suite/"

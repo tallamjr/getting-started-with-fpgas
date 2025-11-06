@@ -160,18 +160,61 @@ The easiest way to build FPGA bitstreams:
 # Activate tools (if not already in your shell profile)
 source ~/oss-cad-suite/environment
 
-# Build the default example (Switches_To_LEDs)
-make
+# Build the Switches_To_LEDs example
+make TOP=Switches_To_LEDs SRC=chapter02/Switches_To_LEDs.v
 
 # Program your connected FPGA
-make program
+make program TOP=Switches_To_LEDs SRC=chapter02/Switches_To_LEDs.v
+
+# Build the LED Toggle example
+make TOP=LED_Toggle_Project SRC=chapter04/LED_Toggle_Project.v
+
+# Program the LED Toggle example
+make program TOP=LED_Toggle_Project SRC=chapter04/LED_Toggle_Project.v
 
 # Clean build artifacts
 make clean
 
-# Build a different module
-make TOP=MyModule SRC=path/to/mymodule.v
+# Show help
+make help
 ```
+
+### Understanding Makefile Parameters
+
+#### Why do we need both TOP and SRC?
+
+You might wonder why the Makefile requires both a module name (`TOP`) and a source file (`SRC`), especially since each example file in this repository contains only one module.
+
+**The technical reason**: In FPGA development, a single Verilog file can contain multiple modules. For example:
+
+```verilog
+// File: my_design.v
+
+module Counter(input clk, output reg [7:0] count);
+  // counter implementation
+endmodule
+
+module Display(input [7:0] value, output [6:0] segments);
+  // display implementation
+endmodule
+
+module Top_Module(input clk, output [6:0] segments);
+  wire [7:0] count;
+  Counter c(.clk(clk), .count(count));
+  Display d(.value(count), .segments(segments));
+endmodule
+```
+
+The synthesis tool (yosys) needs to know which module is the "top-level" entry point—in this case, `Top_Module`, not `Counter` or `Display`. The `TOP` parameter tells yosys which module to synthesize as the design root.
+
+**For this repository**: While each example file contains only one module (and the module name closely matches the filename), requiring both parameters ensures:
+- **Explicit specification**: You always know exactly which module and file you're building
+- **No surprises**: The Makefile won't build something unexpected using stale defaults
+- **Standard practice**: This follows typical FPGA development workflows where designs often span multiple files
+
+**In practice**: When building examples from this repository, the TOP parameter will match the module name in your Verilog file:
+- `TOP=Switches_To_LEDs` for the module `Switches_To_LEDs` in `chapter02/Switches_To_LEDs.v`
+- `TOP=LED_Toggle_Project` for the module `LED_Toggle_Project` in `chapter04/LED_Toggle_Project.v`
 
 ### Manual Workflow (for understanding)
 
@@ -265,7 +308,7 @@ The PCF file is specific to the GO Board's physical layout. Other FPGA boards re
 source ~/oss-cad-suite/environment
 
 # Full workflow in one command
-make
+make TOP=Switches_To_LEDs SRC=chapter02/Switches_To_LEDs.v
 
 # Or step-by-step
 yosys -p "synth_ice40 -top Switches_To_LEDs -json build.json" chapter02/Switches_To_LEDs.v
@@ -536,20 +579,23 @@ The 25 MHz clock samples the switch ~6 times faster than you can press it, ensur
 The Makefile is highly configurable:
 
 ```bash
-# Build different module
-make TOP=Blinker SRC=examples/blinker.v
+# Build different module (TOP and SRC always required)
+make TOP=And_Gate_Project SRC=chapter03/And_Gate_Project.v
 
-# Use different constraints
-make PCF=custom_board.pcf
+# Use different constraints file
+make TOP=Switches_To_LEDs SRC=chapter02/Switches_To_LEDs.v PCF=custom_board.pcf
 
-# Different FPGA device
-make DEVICE=hx8k PACKAGE=ct256
+# Target different FPGA device
+make TOP=Switches_To_LEDs SRC=chapter02/Switches_To_LEDs.v DEVICE=hx8k PACKAGE=ct256
 
 # Show current configuration
-make info
+make info TOP=Switches_To_LEDs SRC=chapter02/Switches_To_LEDs.v
 
-# Show help
+# Show help (no parameters needed)
 make help
+
+# Clean build artifacts (no parameters needed)
+make clean
 ```
 
 ### Key Points
