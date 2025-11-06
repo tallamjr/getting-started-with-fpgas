@@ -274,6 +274,263 @@ icepack build.asc build.bin
 openFPGALoader -b ice40_generic build.bin
 ```
 
+## Detailed Example: LED Toggle Project
+
+This section provides an in-depth walkthrough of building the LED Toggle example from Chapter 4, explaining exactly what happens at each stage when you run `make TOP=LED_Toggle_Project SRC=chapter04/LED_Toggle_Project.v`.
+
+### Overview: What the Design Does
+
+The LED Toggle design demonstrates sequential logic with flip-flops. Instead of directly connecting switches to LEDs (combinational logic), this design:
+- Detects when you **release** a button (falling edge detection)
+- **Toggles** the LED state on/off each time
+- **Remembers** the LED state between button presses using flip-flops
+
+### Step-by-Step Build Process
+
+#### 1. Makefile Variable Resolution
+
+When you run:
+```bash
+make TOP=LED_Toggle_Project SRC=chapter04/LED_Toggle_Project.v
+```
+
+The Makefile processes:
+```makefile
+TOP = LED_Toggle_Project                    # Your module name
+SRC = chapter04/LED_Toggle_Project.v        # Your Verilog file
+PROJECT = led-toggle-project                # Lowercase with dashes (line 21)
+JSON = led-toggle-project.json              # Synthesis output
+ASC = led-toggle-project.asc                # Place & route output
+BIN = led-toggle-project.bin                # Final bitstream
+```
+
+The module name is converted to lowercase with dashes for consistent, filesystem-safe filenames.
+
+#### 2. Stage 1: Synthesis with Yosys
+
+**Command executed:**
+```bash
+yosys -p "synth_ice40 -top LED_Toggle_Project -json led-toggle-project.json" chapter04/LED_Toggle_Project.v
+```
+
+**Input Verilog:**
+```verilog
+module LED_Toggle_Project (input i_Clk, input i_Switch_1, output o_LED_1);
+    reg r_LED_1 = 1'b0;
+    reg r_Switch_1 = 1'b0;
+
+    always @(posedge i_Clk) begin
+        r_Switch_1 <= i_Switch_1;           // Store previous switch state
+
+        // Detect falling edge: switch was high, now low
+        if (i_Switch_1 == 1'b0 && r_Switch_1 == 1'b1)
+            r_LED_1 <= ~r_LED_1;            // Toggle LED
+    end
+
+    assign o_LED_1 = r_LED_1;
+endmodule
+```
+
+**What Yosys does:**
+
+1. **Parses Verilog** - Reads and validates syntax
+2. **Infers hardware**:
+   - `reg r_LED_1` → D flip-flop (stores LED state)
+   - `reg r_Switch_1` → D flip-flop (stores previous switch state for edge detection)
+   - `if (i_Switch_1 == 1'b0 && r_Switch_1 == 1'b1)` → AND + NOT gates (edge detector)
+   - `r_LED_1 <= ~r_LED_1` → XOR gate (toggle logic)
+3. **Maps to iCE40 primitives**:
+   - Converts flip-flops to `SB_DFF` (iCE40 D flip-flop cells)
+   - Converts logic gates to `SB_LUT4` (4-input lookup tables)
+   - Connects clock signal to flip-flop clock inputs
+
+**Output:** `led-toggle-project.json` (~332KB)
+- JSON netlist describing primitives and their connections
+- Contains cell types, parameters, and port connections
+
+#### 3. Stage 2: Place and Route with nextpnr-ice40
+
+**Command executed:**
+```bash
+nextpnr-ice40 --hx1k --package vq100 \
+  --json led-toggle-project.json \
+  --asc led-toggle-project.asc \
+  --pcf Go_Board_Pin_Constraints.pcf
+```
+
+**What nextpnr does:**
+
+**Step 2a: Reading inputs**
+- Reads JSON netlist (2 flip-flops, several LUTs, I/O connections)
+- Reads pin constraints:
+  ```pcf
+  set_io i_Clk 15          # Clock on physical pin 15
+  set_io i_Switch_1 53     # Switch on pin 53
+  set_io o_LED_1 56        # LED on pin 56
+  ```
+
+**Step 2b: Placement**
+- Assigns each logic cell to a physical location on the FPGA die
+- Tries to place related logic close together to minimize routing distance
+- Places flip-flops near I/O pins 53 and 56
+- Considers timing constraints (signal must propagate within clock period)
+
+**Step 2c: Routing**
+- Connects placed cells using the FPGA's programmable interconnect
+- Routes clock from pin 15 to both flip-flops' clock inputs
+- Routes switch input through edge detection logic to LED output
+- Uses routing resources (wires, switch boxes, connection boxes)
+- Optimises for minimal delay and wire usage
+
+**Output:** `led-toggle-project.asc` (~181KB)
+
+ASCII text file describing:
+- Logic cell configurations (LUT equations, flip-flop enables)
+- Routing switch settings
+- I/O buffer configurations (pull-ups, drive strength)
+
+Example snippet:
+```
+.logic_tile 7 8
+0010000000000000
+0000000100000000
+...
+```
+Each tile contains configuration bits for logic cells and local routing.
+
+#### 4. Stage 3: Bitstream Generation with icepack
+
+**Command executed:**
+```bash
+icepack led-toggle-project.asc led-toggle-project.bin
+```
+
+**What icepack does:**
+
+1. **Reads ASCII configuration** - All the binary patterns from `.asc` tiles
+2. **Encodes to binary format**:
+   - Adds sync pattern `0x7eaa997e` (tells FPGA where config starts)
+   - Compresses repeated patterns
+   - Adds CRC checksums for error detection
+3. **Generates 32KB bitstream** - Exact size for iCE40HX1K configuration memory
+
+**Output:** `led-toggle-project.bin` (32KB)
+
+Bitstream header (first 16 bytes):
+```
+ff00 00ff 7eaa 997e 5100 0105 9200 2062
+```
+- `ff00 00ff`: Preamble (wakes up FPGA)
+- `7eaa 997e`: Sync pattern (configuration start marker)
+- Remaining: Configuration data and metadata
+
+#### 5. Stage 4: Programming with openFPGALoader
+
+**Command executed:**
+```bash
+openFPGALoader -b ice40_generic led-toggle-project.bin
+```
+
+**What happens:**
+
+**Step 4a: USB connection**
+```
+Computer → USB → FTDI FT2232H Chip → SPI Bus → Flash Memory
+                                              ↓
+                                           FPGA reads config on power-up
+```
+
+**Step 4b: Flash programming sequence**
+1. **Detect board**: Identifies FTDI chip via USB
+2. **Read flash ID**: SPI command `0x9F` → Jedec ID `0x20` (Winbond flash)
+3. **Erase flash**: Sends sector erase commands (64KB region)
+4. **Write bitstream**: Programs 32KB bitstream to flash starting at address `0x00000000`
+5. **Verify write**: Reads back and compares checksums
+6. **Reset FPGA**: Triggers `CRESET_B` pin to reconfigure
+
+**Step 4c: FPGA configuration**
+1. FPGA enters configuration mode
+2. Reads bitstream from flash via SPI
+3. Loads configuration into SRAM cells
+4. Once complete, `CDONE` signal goes high
+5. Design starts running immediately
+
+### The Complete Flow Visualised
+
+```
+LED_Toggle_Project.v                    Your Verilog source code
+         ↓
+    [Yosys Synthesis]                   Maps to FPGA primitives
+         ↓
+led-toggle-project.json                 Netlist: cells + connections
+         ↓
+    [nextpnr Place & Route]             Physical layout on chip
+         ↓                              (+ Go_Board_Pin_Constraints.pcf)
+led-toggle-project.asc                  Configuration: bits for each tile
+         ↓
+    [icepack Bitstream]                 Binary encoding
+         ↓
+led-toggle-project.bin                  32KB bitstream ready for FPGA
+         ↓
+    [openFPGALoader]                    Flash programming
+         ↓
+    FPGA Hardware Running!              LED toggles on button press
+```
+
+### How the Makefile Orchestrates Dependencies
+
+The Makefile uses **dependency chains** to build only what's necessary:
+
+```makefile
+all: $(BIN)                    # Default target: build bitstream
+
+$(BIN): $(ASC)                 # Bitstream depends on ASC file
+    icepack $(ASC) $(BIN)
+
+$(ASC): $(JSON) $(PCF)         # ASC depends on JSON netlist and pin constraints
+    nextpnr-ice40 ...
+
+$(JSON): $(SRC) $(PCF)         # JSON depends on Verilog source
+    yosys ...
+```
+
+**Dependency resolution example:**
+
+When you run `make`:
+1. Make wants to build `led-toggle-project.bin`
+2. Checks if it exists and is newer than `led-toggle-project.asc`
+3. If ASC is missing or older, checks `led-toggle-project.json`
+4. If JSON is missing or older, checks `chapter04/LED_Toggle_Project.v`
+5. Builds from bottom up: Verilog → JSON → ASC → BIN
+
+**Incremental builds:**
+- Edit only Verilog → Rebuilds JSON, ASC, BIN
+- Edit only PCF → Skips synthesis, rebuilds ASC and BIN
+- No changes → Make does nothing ("up to date")
+
+This is the power of Make's dependency tracking!
+
+### Resource Utilisation
+
+For this design, nextpnr reports:
+```
+Device utilisation:
+    ICESTORM_LC:       3/1280     0%    (Logic cells: 2 DFFs + 1 LUT)
+    SB_IO:            3/112      2%    (I/O pins: Clk, Switch, LED)
+    SB_GB:            1/8       12%    (Global clock buffer)
+```
+
+The iCE40HX1K has 1,280 logic cells, and this simple design uses only 3!
+
+### Testing Your Design
+
+Once programmed:
+1. **Press Switch 1** → Nothing visible yet (design waits for release)
+2. **Release Switch 1** → LED 1 turns on (falling edge detected, state toggled)
+3. **Press and release again** → LED 1 turns off (toggled again)
+
+The 25 MHz clock samples the switch ~6 times faster than you can press it, ensuring reliable edge detection.
+
 ### Makefile Configuration
 
 The Makefile is highly configurable:
