@@ -74,58 +74,173 @@ Suggests some FPGA development boards that you can use for this book’s project
 
 Outlines strategies for finding an FPGA-related job, in case you want to pursue FPGA design professionally. I’ll make suggestions on how to build a good resume, prepare for interviews, and negotiate for the best-possible job offer.
 
-## Getting Started
+## Getting Started with Open Source FPGA Tools
 
-1. Install the core tools via Homebrew (as documented in external/README.md:22):
-brew install yosys libftdi graphviz libftdi0
-brew install cmake python boost eigen
+### Why OSS CAD Suite?
 
-2. Install the iCE40 toolchain:
-# Install icestorm tools (includes iceprog for programming)
-git clone https://github.com/ddm/icetools.git
-cd icetools && ./icetools.sh
+This repository uses the **OSS CAD Suite** - a complete, pre-built package of open-source FPGA tools from YosysHQ. Benefits:
 
-# Install nextpnr for place-and-route
-git clone https://github.com/YosysHQ/nextpnr.git
-cd nextpnr && git submodule update --init --recursive
-mkdir build && cd build
-cmake .. -DARCH=ice40
-make -j$(nproc)
-sudo make install
+- **All-in-one installation**: Single download includes yosys, nextpnr, icestorm, and 100+ other tools
+- **No compilation required**: Pre-built binaries for macOS (both Intel and Apple Silicon), Linux, and Windows
+- **Regularly updated**: Nightly builds with latest features and bug fixes
+- **Consistent versions**: All tools are tested together and guaranteed to work
+- **Zero dependencies**: Everything bundled, including Python, libraries, and utilities
 
-The Complete Workflow
+Alternative approaches (building from source, using Homebrew taps) often fail due to version mismatches, broken dependencies, or recursive dependency issues. OSS CAD Suite avoids these problems entirely.
 
-The workflow follows these stages: Verilog → Synthesis → Place & Route → Bitstream → Programming
+### Installation
 
-Here's how each tool fits into the process:
+#### 1. Install openFPGALoader (for programming the FPGA)
 
-1. Write Your Verilog Code
+```bash
+brew install openfpgaloader
+```
 
-Create your design file (e.g., my_design.v). For example, let's use the simple LED control from chapter02/Switches_To_LEDs.v:85:
+#### 2. Download and Install OSS CAD Suite
 
-module my_design (
-    input  i_Switch_1,
-    input  i_Switch_2,
-    input  i_Switch_3,
-    input  i_Switch_4,
-    output o_LED_1,
-    output o_LED_2,
-    output o_LED_3,
-    output o_LED_4
-);
+```bash
+# Download latest release (for Apple Silicon Macs)
+cd ~
+curl -L -o oss-cad-suite.tgz https://github.com/YosysHQ/oss-cad-suite-build/releases/download/2025-11-03/oss-cad-suite-darwin-arm64-20251103.tgz
 
-    assign o_LED_1 = i_Switch_1;
-    assign o_LED_2 = i_Switch_2;
-    assign o_LED_3 = i_Switch_3;
-    assign o_LED_4 = i_Switch_4;
+# For Intel Macs, use:
+# curl -L -o oss-cad-suite.tgz https://github.com/YosysHQ/oss-cad-suite-build/releases/download/2025-11-03/oss-cad-suite-darwin-x64-20251103.tgz
 
-endmodule
+# Extract
+tar -xzf oss-cad-suite.tgz
+rm oss-cad-suite.tgz
+```
 
-2. Create Pin Constraints File
+Check for the latest release at: https://github.com/YosysHQ/oss-cad-suite-build/releases/latest
 
-Copy the provided Go_Board_Pin_Constraints.pcf:1 or create your own .pcf file mapping your Verilog signals to physical FPGA pins:
+#### 3. Activate the Toolchain
 
-# Clock and basic I/O constraints for GO Board (iCE40HX1K VQ100)
+Every time you want to use the FPGA tools, activate the environment:
+
+```bash
+source ~/oss-cad-suite/environment
+```
+
+**For permanent activation**, add to your `~/.zshrc` or `~/.bashrc`:
+
+```bash
+# OSS CAD Suite for FPGA development
+source ~/oss-cad-suite/environment
+```
+
+#### 4. Verify Installation
+
+```bash
+source ~/oss-cad-suite/environment
+make check-tools
+```
+
+You should see:
+- Yosys 0.58+ (synthesis)
+- nextpnr-ice40 0.9+ (place and route)
+- icepack (bitstream generation)
+- openFPGALoader 0.13+ (programming)
+
+## FPGA Development Workflow
+
+### Overview: Verilog → Bitstream → FPGA
+
+The complete workflow has three stages:
+
+1. **Synthesis** (yosys): Verilog → JSON netlist
+2. **Place & Route** (nextpnr): JSON → ASCII configuration
+3. **Bitstream** (icepack): ASCII → Binary bitstream
+4. **Programming** (openFPGALoader): Binary → FPGA hardware
+
+### Quick Start with Makefile
+
+The easiest way to build FPGA bitstreams:
+
+```bash
+# Activate tools (if not already in your shell profile)
+source ~/oss-cad-suite/environment
+
+# Build the default example (Switches_To_LEDs)
+make
+
+# Program your connected FPGA
+make program
+
+# Clean build artifacts
+make clean
+
+# Build a different module
+make TOP=MyModule SRC=path/to/mymodule.v
+```
+
+### Manual Workflow (for understanding)
+
+If you want to understand each step or debug issues, run the tools manually:
+
+#### Step 1: Synthesis with Yosys
+
+Converts high-level Verilog to a netlist of iCE40 FPGA primitives.
+
+```bash
+yosys -p "synth_ice40 -top Switches_To_LEDs -json switches-to-leds.json" chapter02/Switches_To_LEDs.v
+```
+
+**Output**: `switches-to-leds.json` (~332KB) - synthesized netlist in JSON format
+
+**What happens**: Yosys analyses your Verilog, infers logic gates, flip-flops, and RAM blocks, then maps these to iCE40-specific primitives (LUTs, DFFs, etc.).
+
+#### Step 2: Place and Route with nextpnr-ice40
+
+Determines physical placement of logic elements on the FPGA and routes connections between them.
+
+```bash
+nextpnr-ice40 --hx1k --package vq100 \
+  --json switches-to-leds.json \
+  --asc switches-to-leds.asc \
+  --pcf Go_Board_Pin_Constraints.pcf
+```
+
+**Output**: `switches-to-leds.asc` (~181KB) - ASCII configuration file
+
+**What happens**: nextpnr reads the netlist and pin constraints, assigns each logic element to a physical location on the iCE40HX1K chip, and routes wires between them. It optimises for timing and resource usage.
+
+**Parameters**:
+- `--hx1k`: Target device (iCE40HX1K for GO Board)
+- `--package vq100`: Physical package type (100-pin VQFP)
+- `--pcf`: Pin constraints file mapping signals to physical pins
+
+#### Step 3: Generate Bitstream with icepack
+
+Converts the ASCII configuration to a binary bitstream.
+
+```bash
+icepack switches-to-leds.asc switches-to-leds.bin
+```
+
+**Output**: `switches-to-leds.bin` (32KB) - binary bitstream
+
+**What happens**: icepack encodes the ASCII configuration into the iCE40's binary bitstream format. The 32KB file contains all the configuration bits for the FPGA's logic, routing, and I/O.
+
+#### Step 4: Program the FPGA
+
+Load the bitstream into your FPGA board.
+
+```bash
+# Using openFPGALoader (recommended - supports more boards)
+openFPGALoader -b ice40_generic switches-to-leds.bin
+
+# Or using iceprog (included in OSS CAD Suite)
+iceprog switches-to-leds.bin
+```
+
+**What happens**: The programmer communicates with the FPGA over USB and loads your bitstream into the configuration memory. The FPGA immediately starts running your design.
+
+### Pin Constraints File
+
+The `Go_Board_Pin_Constraints.pcf` file maps Verilog signal names to physical FPGA pins:
+
+```pcf
+# Clock
 set_io i_Clk 15
 
 # LED outputs
@@ -139,102 +254,53 @@ set_io i_Switch_1 53
 set_io i_Switch_2 51
 set_io i_Switch_3 54
 set_io i_Switch_4 52
+```
 
-3. Synthesis with Yosys
+The PCF file is specific to the GO Board's physical layout. Other FPGA boards require different pin mappings.
 
-Convert your Verilog to a JSON netlist (external/Makefile:9):
+### Example: Building the Switches to LEDs Design
 
-yosys -p "synth_ice40 -top my_design -json my_design.json" my_design.v
+```bash
+# Activate toolchain
+source ~/oss-cad-suite/environment
 
-What this does: Yosys reads your Verilog, performs synthesis (converts high-level constructs to basic logic elements), and outputs a JSON representation targeting iCE40 primitives.
-
-4. Place and Route with nextpnr-ice40
-
-Convert the netlist to an ASCII configuration file (external/Makefile:12):
-
-nextpnr-ice40 --hx1k --package vq100 --json my_design.json --asc my_design.asc --pcf Go_Board_Pin_Constraints.pcf
-
-What this does: nextpnr takes the synthesised netlist and your pin constraints, then decides exactly where each logic element goes on the physical FPGA and how they're connected (place and route).
-
-5. Generate Bitstream with icepack
-
-Convert ASCII config to binary bitstream (external/Makefile:15):
-
-icepack my_design.asc my_design.bin
-
-What this does: icepack converts the ASCII configuration into a binary bitstream that can be loaded into the FPGA's configuration memory.
-
-6. Program the FPGA with iceprog
-
-Flash the bitstream to your connected FPGA (external/Makefile:18):
-
-iceprog my_design.bin
-
-What this does: iceprog communicates with the FPGA over USB and loads your bitstream into the device's configuration memory, making your design active immediately.
-
-Complete Example Using the Provided Makefile
-
-The external/Makefile:1 provides a complete workflow template. To use it:
-
-1. Set up your project structure:
-cp external/Makefile ./
-cp Go_Board_Pin_Constraints.pcf ./board.pcf
-
-2. Create your Verilog file as top.v (or modify the Makefile TOP variable)
-3. Build and program:
-# Build everything (synthesis → place&route → bitstream)
+# Full workflow in one command
 make
 
-# Program the FPGA
-make program
+# Or step-by-step
+yosys -p "synth_ice40 -top Switches_To_LEDs -json build.json" chapter02/Switches_To_LEDs.v
+nextpnr-ice40 --hx1k --package vq100 --json build.json --asc build.asc --pcf Go_Board_Pin_Constraints.pcf
+icepack build.asc build.bin
+openFPGALoader -b ice40_generic build.bin
+```
 
-# Clean build files
-make clean
+### Makefile Configuration
 
-Example: Simple LED Blinker
+The Makefile is highly configurable:
 
-Here's a complete working example that blinks an LED:
+```bash
+# Build different module
+make TOP=Blinker SRC=examples/blinker.v
 
-blinker.v:
-module blinker (
-    input i_Clk,
-    output o_LED_1
-);
+# Use different constraints
+make PCF=custom_board.pcf
 
-    reg [23:0] counter = 0;
-    reg led_state = 0;
+# Different FPGA device
+make DEVICE=hx8k PACKAGE=ct256
 
-    always @(posedge i_Clk) begin
-        counter <= counter + 1;
-        if (counter == 0) begin
-            led_state <= ~led_state;
-        end
-    end
+# Show current configuration
+make info
 
-    assign o_LED_1 = led_state;
+# Show help
+make help
+```
 
-endmodule
+### Key Points
 
-Build and program:
-# Synthesis
-yosys -p "synth_ice40 -top blinker -json blinker.json" blinker.v
-
-# Place and route
-nextpnr-ice40 --hx1k --package vq100 --json blinker.json --asc blinker.asc --pcf Go_Board_Pin_Constraints.pcf
-
-# Generate bitstream
-icepack blinker.asc blinker.bin
-
-# Program FPGA
-iceprog blinker.bin
-
-Key Points:
-
-- No proprietary tools needed - this is a completely open source workflow
-- The GO Board uses a Lattice iCE40HX1K FPGA in VQ100 package
-- Pin constraints are crucial - they tell the tools which Verilog signals connect to which physical pins
-- The workflow is linear - each step depends on the previous one's output
-- Programming is immediate - once iceprog completes, your design is running on the hardware
-
-This workflow lets you go from Verilog code to a running FPGA design using entirely open source tools!
+- **Completely open source**: No proprietary tools or licenses required
+- **GO Board specs**: Lattice iCE40HX1K-VQ100 FPGA
+- **Reproducible builds**: Same source always produces identical bitstreams
+- **Fast iteration**: Synthesis + place & route typically completes in seconds for small designs
+- **Immediate results**: FPGA runs your design as soon as programming completes
+- **No FPGA vendor tools needed**: Unlike Xilinx Vivado or Intel Quartus, these tools are vendor-neutral
 
