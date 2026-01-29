@@ -15,7 +15,7 @@ architecture test of Math_Examples is
   begin
     return to_string(to_integer(val));
   end function str;
- 
+
   -- Takes input signed, returns string for printing
   function str(val : in signed) return string is
   begin
@@ -30,7 +30,7 @@ architecture test of Math_Examples is
 
 begin
 
-  process is 
+  process is
     variable i1_u4, i2_u4, o_u4 : unsigned(3 downto 0);
     variable i1_u5, i2_u5, o_u5 : unsigned(4 downto 0);
     variable i1_s4, i2_s4, o_s4 : signed(3 downto 0);
@@ -39,9 +39,9 @@ begin
     variable i1_u8, i2_u8, o_u8 : unsigned(7 downto 0);
     variable i1_s8, i2_s8, o_s8 : signed(7 downto 0);
     variable real1, real2, real3 : real;
-    
+
   begin
-    
+
     -- Unsigned + Unsigned = Unsigned (Rule #1 violation)
     i1_u4 := "1001"; -- dec 9
     i2_u4 := "1011"; -- dec 11
@@ -53,7 +53,7 @@ begin
     i2_s4 := "1011"; -- dec -5
     o_s4  := i1_s4 + i2_s4;
     report "Ex02: " & str(i1_s4) & " + " & str(i2_s4) & " = " & str(o_s4);
-    
+
     -- Unsigned + Unsigned = Unsigned (Rule #1 Fix)
     i1_u4 := "1001"; -- dec 9
     i2_u4 := "1011"; -- dec 11
@@ -61,7 +61,7 @@ begin
     i2_u5 := resize(i2_u4, i2_u5'length);
     o_u5  := i1_u5 + i2_u5;
     report "Ex03: " & str(i1_u5) & " + " & str(i2_u5) & " = " & str(o_u5);
-    
+
     -- Signed + Signed = Signed (Rule #1 Fix)
     i1_s4 := "1001"; -- dec -7
     i2_s4 := "1011"; -- dec -5
@@ -69,7 +69,7 @@ begin
     i2_s5 := resize(i2_s4, i2_s5'length);
     o_s5  := i1_s5 + i2_s5;
     report "Ex04: " & str(i1_s5) & " + " & str(i2_s5) & " = " & str(o_s5);
-    
+
     -- Unsigned - Unsigned = Unsigned (bad)
     i1_u4 := "1001"; -- dec 9
     i2_u4 := "1011"; -- dec 11
@@ -77,7 +77,7 @@ begin
     i2_u5 := resize(i2_u4, i2_u5'length);
     o_u5  := i1_u5 - i2_u5;
     report "Ex05: " & str(i1_u5) & " - " & str(i2_u5) & " = " & str(o_u5);
-    
+
     -- Signed - Signed = Signed (fix)
     i1_u4 := "1001"; -- dec 9
     i2_u4 := "1011"; -- dec 11
@@ -103,7 +103,7 @@ begin
     i2_u4 := "1011"; -- dec 11
     o_u8  := i1_u4 * i2_u4;
     report "Ex09: " & str(i1_u4) & " * " & str(i2_u4) & " = " & str(o_u8);
-    
+
     -- Signed * Signed = Signed
     i1_s4 := "1000"; -- dec -8
     i2_s4 := "0111"; -- dec 7
@@ -156,12 +156,12 @@ begin
     i1_u5 := resize(i1_u4, i1_u5'length);
     i2_u5 := resize(i2_u4, i2_u5'length);
     o_u5  := i1_u5 + i2_u5;
-    
+
     real1 := real(to_integer(i1_u5));
     real2 := real(to_integer(i2_u5));
     real3 := real(to_integer(o_u5));
     report "Ex21: " & str(real1) & " + " & str(real2) & " = " & str(real3);
-    
+
     -- Or Convert U4.0 to U4.1
     -- U3.1 + U4.1 = U5.1 (Rule #5 fix, using expansion)
     i1_u4 := "0011";
@@ -170,19 +170,19 @@ begin
     i2_u6 := resize(i2_u4, i2_u6'length); -- expand for adding
     i2_u6 := shift_left(i2_u6, 1);  -- Convert 4.0 to 4.1
     o_u6  := i1_u6 + i2_u6;
-    
+
     real1 := real(to_integer(i1_u6)) / 2.0;
     real2 := real(to_integer(i2_u6)) / 2.0;
     real3 := real(to_integer(o_u6)) / 2.0;
     report "Ex22: " & str(real1) & " + " & str(real2) & " = " & str(real3);
 
-    
+
     -- Multiplication with Decimals
     -- U2.2 * U3.1 = U5.3
     i1_u4 := "0101";
     i2_u4 := "1011";
     o_u8  := i1_u4 * i2_u4;
-    
+
     real1 := real(to_integer(i1_u4)) / 4.0;
     real2 := real(to_integer(i2_u4)) / 2.0;
     real3 := real(to_integer(o_u8))  / 8.0;
@@ -192,7 +192,7 @@ begin
     i1_s4 := "0110";
     i2_s4 := "1010";
     o_s8  := i1_s4 * i2_s4;
-    
+
     real1 := real(to_integer(i1_s4)) / 4.0;
     real2 := real(to_integer(i2_s4));
     real3 := real(to_integer(o_s8))  / 4.0;
@@ -201,5 +201,5 @@ begin
     wait for 1 ns;
     finish;
     end process;
-    
+
 end test;

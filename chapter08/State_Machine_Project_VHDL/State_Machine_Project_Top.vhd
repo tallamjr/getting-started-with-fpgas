@@ -2,10 +2,10 @@
  -- Creates a Memory Game
  -- To Start: User pushes SW1 and SW2 at the same time
  -- Game will display random pattern that user must repeat
- -- If you get to GAME_LIMIT correctly, you win! 
+ -- If you get to GAME_LIMIT correctly, you win!
  -- Winners will see 0xAA displayed on 7-segment display
  -- If you make a mistake you lose and see 0xEE displayed.
- -- 
+ --
  -- Uses code from previous chapters including LFSR, Debounce, and Counters.
  -- Also shows how 7-segment displays work.
 
@@ -49,43 +49,43 @@ architecture RTL of State_Machine_Project_Top is
 
 begin
 
-  Debounce_SW1 : entity work.Debounce_Filter 
-    generic map ( 
+  Debounce_SW1 : entity work.Debounce_Filter
+    generic map (
       DEBOUNCE_LIMIT => DEBOUNCE_LIMIT)
     port map (
       i_Clk       => i_Clk,
       i_Bouncy    => i_Switch_1,
       o_Debounced => w_Switch_1);
 
-  Debounce_SW2 : entity work.Debounce_Filter 
-    generic map ( 
+  Debounce_SW2 : entity work.Debounce_Filter
+    generic map (
       DEBOUNCE_LIMIT => DEBOUNCE_LIMIT)
     port map (
       i_Clk       => i_Clk,
       i_Bouncy    => i_Switch_2,
       o_Debounced => w_Switch_2);
-  
-  Debounce_SW3 : entity work.Debounce_Filter 
-    generic map ( 
+
+  Debounce_SW3 : entity work.Debounce_Filter
+    generic map (
       DEBOUNCE_LIMIT => DEBOUNCE_LIMIT)
     port map (
       i_Clk       => i_Clk,
       i_Bouncy    => i_Switch_3,
       o_Debounced => w_Switch_3);
 
-  Debounce_SW4 : entity work.Debounce_Filter 
-    generic map ( 
+  Debounce_SW4 : entity work.Debounce_Filter
+    generic map (
       DEBOUNCE_LIMIT => DEBOUNCE_LIMIT)
     port map (
       i_Clk       => i_Clk,
       i_Bouncy    => i_Switch_4,
       o_Debounced => w_Switch_4);
-  
+
   Game_Inst : entity work.State_Machine_Game
     generic map (
       CLKS_PER_SEC => CLKS_PER_SEC,
-      GAME_LIMIT   => GAME_LIMIT) 
-    port map ( 
+      GAME_LIMIT   => GAME_LIMIT)
+    port map (
       i_Clk      => i_Clk,
       i_Switch_1 => w_Switch_1,
       i_Switch_2 => w_Switch_2,
@@ -108,7 +108,7 @@ begin
       o_Segment_E  => w_Segment2_E,
       o_Segment_F  => w_Segment2_F,
       o_Segment_G  => w_Segment2_G);
-    
+
   -- Invert needed on Go Board
   o_Segment2_A <= not w_Segment2_A;
   o_Segment2_B <= not w_Segment2_B;

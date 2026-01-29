@@ -13,7 +13,7 @@ architecture test of Turnstile_Example_TB is
 
 begin
 
-  UUT : entity work.Turnstile_Example 
+  UUT : entity work.Turnstile_Example
   port map (
     i_Reset  => r_Reset,
     i_Clk    => r_Clk,
@@ -22,7 +22,7 @@ begin
     o_Locked => w_Locked);
 
   r_Clk <= not r_Clk after 1 ns;
-  
+
   process is
   begin
     wait for 10 ns;
@@ -48,5 +48,5 @@ begin
 
     finish;  -- need VHDL-2008
   end process;
-   
+
 end test;

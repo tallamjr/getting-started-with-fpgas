@@ -2,8 +2,8 @@
 Single Port RAM, Dual Port RAM, FIFO.
 
 ## Single Port RAM:
-Random Access Memory, provide an address to write to or read from. 
-Will store data at that address for retreval later. 
+Random Access Memory, provide an address to write to or read from.
+Will store data at that address for retreval later.
 Single port can only access 1 location of memory at a time.
 
 ## Dual Port RAM

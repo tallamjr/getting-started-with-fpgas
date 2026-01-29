@@ -695,4 +695,3 @@ make clean
 - **Fast iteration**: Synthesis + place & route typically completes in seconds for small designs
 - **Immediate results**: FPGA runs your design as soon as programming completes
 - **No FPGA vendor tools needed**: Unlike Xilinx Vivado or Intel Quartus, these tools are vendor-neutral
-

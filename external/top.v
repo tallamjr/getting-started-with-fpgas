@@ -1,13 +1,13 @@
 // top.v
 
 module seg_decoder (
-    input  [3:0] num,
+    input [3:0] num,
     output reg [6:0] seg
 );
   // Seven-segment decoder (assuming a common-cathode display)
   // Bit order: seg[0] = A, seg[1] = B, ... seg[6] = G.
   always @(*) begin
-    case(num)
+    case (num)
       4'd0: seg = 7'b0111111;
       4'd1: seg = 7'b0000110;
       4'd2: seg = 7'b1011011;
@@ -16,7 +16,7 @@ module seg_decoder (
       4'd5: seg = 7'b1101101;
       4'd6: seg = 7'b1111101;
       4'd7: seg = 7'b0000111;
-      4'd8: seg = 7'b1111111; // All segments on: displays "8"
+      4'd8: seg = 7'b1111111;  // All segments on: displays "8"
       4'd9: seg = 7'b1101111;
       default: seg = 7'b0000000;
     endcase
@@ -53,4 +53,3 @@ module top (
   assign o_Segment1_G = seg[6];
 
 endmodule
-

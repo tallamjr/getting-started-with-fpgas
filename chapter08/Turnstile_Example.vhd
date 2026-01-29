@@ -12,7 +12,7 @@ end entity Turnstile_Example;
 
 architecture RTL of Turnstile_Example is
 
-  type t_State is (LOCKED, UNLOCKED); 
+  type t_State is (LOCKED, UNLOCKED);
   signal r_Curr_State, r_Next_State : t_State;
 
 begin
@@ -32,8 +32,8 @@ begin
  -- begin
  --   r_Next_State <= r_Curr_State;
 --
- --   case r_Curr_State is 
- --     
+ --   case r_Curr_State is
+ --
  --     when LOCKED =>
  --       if i_Coin = '1' then
  --         r_Next_State <= UNLOCKED;
@@ -47,26 +47,26 @@ begin
  --   end case;
  -- end process;
 
-  
+
   -- Single always block approach
   process (i_Clk, i_Reset) is
   begin
     if i_Reset = '1' then
       r_Curr_State <= LOCKED;
     elsif rising_edge(i_Clk) then
-  
-      case r_Curr_State is 
-      
+
+      case r_Curr_State is
+
         when LOCKED =>
           if i_Coin = '1' then
             r_Curr_State <= UNLOCKED;
           end if;
-  
+
         when UNLOCKED =>
           if i_Push = '1' then
             r_Curr_State <= LOCKED;
           end if;
-  
+
       end case;
     end if;
   end process;

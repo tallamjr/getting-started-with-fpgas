@@ -25,7 +25,7 @@ entity LFSR is
     -- Optional Seed Value
     i_Seed_DV   : in std_logic;
     i_Seed_Data : in std_logic_vector(NUM_BITS-1 downto 0);
-    
+
     o_LFSR_Data : out std_logic_vector(NUM_BITS-1 downto 0);
     o_LFSR_Done : out std_logic);
 end entity LFSR;
@@ -34,7 +34,7 @@ architecture RTL of LFSR is
 
   signal r_LFSR : std_logic_vector(NUM_BITS downto 1) := (others => '0');
   signal w_XNOR : std_logic;
-  
+
 begin
 
   -- Purpose: Load up LFSR with Seed if Data Valid (DV) pulse is detected.
@@ -50,7 +50,7 @@ begin
         end if;
       end if;
     end if;
-  end process; 
+  end process;
 
   -- Create Feedback Polynomials.  Based on Application Note XAPP052.PDF
   g_LFSR_3 : if NUM_BITS = 3 generate
@@ -172,9 +172,9 @@ begin
   g_LFSR_32 : if NUM_BITS = 32 generate
     w_XNOR <= r_LFSR(32) xnor r_LFSR(22) xnor r_LFSR(2) xnor r_LFSR(1);
   end generate g_LFSR_32;
-  
-  
+
+
   o_LFSR_Data <= r_LFSR(r_LFSR'left downto 1);
   o_LFSR_Done <= '1' when r_LFSR(r_LFSR'left downto 1) = i_Seed_Data else '0';
-  
+
 end architecture RTL;

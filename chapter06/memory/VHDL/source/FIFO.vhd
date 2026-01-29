@@ -7,12 +7,12 @@
 -- Set i_AE_Level to number of words away from empty when o_AE goes high
 --   o_AE_Flag is high when this number OR LESS is in FIFO.
 --
--- Generics: 
+-- Generics:
 -- WIDTH     - Width of the FIFO
 -- DEPTH     - Max number of items able to be stored in the FIFO
 --
 -- This FIFO cannot be used to cross clock domains, because in order to keep count
--- correctly it would need to handle all metastability issues. 
+-- correctly it would need to handle all metastability issues.
 -- If crossing clock domains is required, use FIFO primitives directly from the vendor.
 
 library ieee;
@@ -20,7 +20,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.math_real.all;
 
-entity FIFO is 
+entity FIFO is
   generic (
     WIDTH     : integer := 8;
     DEPTH     : integer := 256);
@@ -42,14 +42,14 @@ entity FIFO is
     o_Empty    : out std_logic);
 end entity FIFO;
 
-architecture RTL of FIFO is 
-  
+architecture RTL of FIFO is
+
   -- Number of bits required to store DEPTH words
   constant DEPTH_BITS : integer := integer(ceil(log2(real(DEPTH))));
 
   signal r_Wr_Addr, r_Rd_Addr : natural range 0 to DEPTH-1;
   signal r_Count : natural range 0 to DEPTH;  -- 1 extra to go to DEPTH
- 
+
   signal w_Rd_DV : std_logic;
   signal w_Rd_Data : std_logic_vector(WIDTH-1 downto 0);
 
@@ -87,7 +87,7 @@ begin
       r_Rd_Addr <= 0;
       r_Count   <= 0;
     elsif rising_edge(i_Clk) then
-      
+
       -- Write
       if i_Wr_DV then
         if r_Wr_Addr = DEPTH-1 then
@@ -127,7 +127,7 @@ begin
   end process;
 
   o_Full <= '1' when ((r_Count = DEPTH) or (r_Count = DEPTH-1 and i_Wr_DV = '1' and i_Rd_En = '0')) else '0';
-  
+
   o_Empty <= '1' when (r_Count = 0) else '0';
 
   o_AF_Flag <= '1' when (r_Count > DEPTH - i_AF_Level) else '0';
@@ -153,5 +153,5 @@ begin
   end process;
   -- synthesis translate_on
   ----------------------------------------------------------------------------
-  
+
 end RTL;

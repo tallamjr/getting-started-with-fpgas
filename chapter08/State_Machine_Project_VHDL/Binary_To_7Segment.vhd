@@ -28,7 +28,7 @@ end entity Binary_To_7Segment;
 architecture RTL of Binary_To_7Segment is
 
   signal r_Hex_Encoding : std_logic_vector(7 downto 0);
-  
+
 begin
 
   -- Purpose: Creates a case statement for all possible input binary numbers.
@@ -46,7 +46,7 @@ begin
         when "0011" =>
           r_Hex_Encoding <= X"79";
         when "0100" =>
-          r_Hex_Encoding <= X"33";          
+          r_Hex_Encoding <= X"33";
         when "0101" =>
           r_Hex_Encoding <= X"5B";
         when "0110" =>

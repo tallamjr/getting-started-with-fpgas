@@ -2,7 +2,7 @@
 library IEEE;
 use IEEE.std_logic_1164.all;
 
-entity LFSR_22 is 
+entity LFSR_22 is
   port (
     i_Clk       : in std_logic;
     o_LFSR_Data : out std_logic_vector(21 downto 0);

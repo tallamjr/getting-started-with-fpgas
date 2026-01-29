@@ -1,18 +1,18 @@
-module timing_error
-  (input  i_Clk,
-   input [7:0] i_Data,
-   output reg [15:0] o_Data);
+module timing_error (
+    input i_Clk,
+    input [7:0] i_Data,
+    output reg [15:0] o_Data
+);
 
   reg [7:0] r0_Data, r1_Data, r2_Data = 0;
 
-  always @(posedge i_Clk)
-  begin
+  always @(posedge i_Clk) begin
     // Register so tools know r0_Data
     // is in i_Clk clock domain.
     r0_Data <= i_Data;
 
     // BAD: Long propagation delay
-    o_Data <= ((r0_Data / 3) + 1) * 5;
+    o_Data  <= ((r0_Data / 3) + 1) * 5;
 
     // FIX: Pipeline math operations
     //r1_Data <= r0_Data / 3;
@@ -21,5 +21,4 @@ module timing_error
 
   end
 
-endmodule // timing_error
-
+endmodule  // timing_error

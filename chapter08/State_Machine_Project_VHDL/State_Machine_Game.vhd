@@ -4,7 +4,7 @@
 -- Push Switch 1 and Switch 2 to start the game.
 -- Displays a pseudo-random pattern on the 4 LEDs
 -- Pseudo-random pattern is created using the LFSR from Chapter 6.
--- User must use buttons to repeat the pattern. 
+-- User must use buttons to repeat the pattern.
 -- If they get it correct, will add 1 more LED blink to the sequence
 -- until the player makes a mistake. Game is over at 8 successful in a row.
 
@@ -12,7 +12,7 @@ library IEEE;
 use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all;
 
-entity State_Machine_Game is 
+entity State_Machine_Game is
   generic (
     CLKS_PER_SEC : integer := 25000000;
     GAME_LIMIT   : integer := 6);
@@ -32,7 +32,7 @@ end entity State_Machine_Game;
 
 architecture RTL of State_Machine_Game is
 
-  type t_SM_Main is (START, PATTERN_OFF, PATTERN_SHOW, 
+  type t_SM_Main is (START, PATTERN_OFF, PATTERN_SHOW,
                      WAIT_PLAYER, INCR_SCORE, LOSER, WINNER);
 
   signal r_SM_Main : t_SM_Main;
@@ -41,7 +41,7 @@ architecture RTL of State_Machine_Game is
 
   type t_Pattern is array (0 to 10) of std_logic_vector(1 downto 0);
   signal r_Pattern : t_Pattern; -- 2D Array: 2-bit wide x 11 deep
-  
+
   signal w_LFSR_Data : std_logic_vector(21 downto 0);
   signal r_Index : integer range 0 to GAME_LIMIT;
   signal w_Index_SLV : std_logic_vector(7 downto 0);
@@ -49,11 +49,11 @@ architecture RTL of State_Machine_Game is
   signal r_Score : unsigned(3 downto 0);
 
 begin
-    
+
   process (i_Clk) is
   begin
     if rising_edge(i_Clk) then
-    
+
       -- Reset game from any state
       if i_Switch_1 = '1' and i_Switch_2 = '1' then
         r_SM_Main <= START;
@@ -65,7 +65,7 @@ begin
           -- Stay in START state until user releases buttons
           when START =>
           -- wait for reset condition to go away
-            if (i_Switch_1 = '0' and  i_Switch_2 = '0' and 
+            if (i_Switch_1 = '0' and  i_Switch_2 = '0' and
                 r_Button_DV = '1') then
               r_Score   <= to_unsigned(0, r_Score'length);
               r_Index   <= 0;
@@ -83,15 +83,15 @@ begin
               if r_Score = r_Index then
                 r_Index   <= 0;
                 r_SM_Main <= WAIT_PLAYER;
-              else 
+              else
                 r_Index   <= r_Index + 1;
-                r_SM_Main <= PATTERN_OFF;  
+                r_SM_Main <= PATTERN_OFF;
               end if;
             end if;
 
           when WAIT_PLAYER =>
             if r_Button_DV = '1' then
-              if (r_Pattern(r_Index) = r_Button_ID and 
+              if (r_Pattern(r_Index) = r_Button_ID and
                   unsigned(w_Index_SLV) = r_Score) then
                 r_Index   <= 0;
                 r_SM_Main <= INCR_SCORE;
@@ -149,13 +149,13 @@ begin
     end if;
   end process;
 
-  o_LED_1 <= '1' when (r_SM_Main = PATTERN_SHOW and 
+  o_LED_1 <= '1' when (r_SM_Main = PATTERN_SHOW and
                        r_Pattern(r_Index) = "00") else i_Switch_1;
-  o_LED_2 <= '1' when (r_SM_Main = PATTERN_SHOW and 
+  o_LED_2 <= '1' when (r_SM_Main = PATTERN_SHOW and
                        r_Pattern(r_Index) = "01") else i_Switch_2;
-  o_LED_3 <= '1' when (r_SM_Main = PATTERN_SHOW and 
+  o_LED_3 <= '1' when (r_SM_Main = PATTERN_SHOW and
                        r_Pattern(r_Index) = "10") else i_Switch_3;
-  o_LED_4 <= '1' when (r_SM_Main = PATTERN_SHOW and 
+  o_LED_4 <= '1' when (r_SM_Main = PATTERN_SHOW and
                        r_Pattern(r_Index) = "11") else i_Switch_4;
 
   -- Create registers to enable falling edge detection
@@ -167,7 +167,7 @@ begin
       r_Switch_2 <= i_Switch_2;
       r_Switch_3 <= i_Switch_3;
       r_Switch_4 <= i_Switch_4;
-      
+
       if r_Switch_1 = '1' and i_Switch_1 = '0' then
         r_Button_DV <= '1';
         r_Button_ID <= "00";
@@ -189,10 +189,10 @@ begin
 
   -- w_Count_En is high when state machine is in
   -- PATTERN_SHOW state or PATTERN_OFF state, else false
-  w_Count_En <= '1' when (r_SM_Main = PATTERN_SHOW or 
+  w_Count_En <= '1' when (r_SM_Main = PATTERN_SHOW or
                           r_SM_Main = PATTERN_OFF) else '0';
 
-  Count_Inst : entity work.Count_And_Toggle 
+  Count_Inst : entity work.Count_And_Toggle
   generic map (
     COUNT_LIMIT => CLKS_PER_SEC/4)
   port map (

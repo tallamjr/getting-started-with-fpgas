@@ -7,7 +7,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use std.env.finish;
 
-entity FIFO_TB is 
+entity FIFO_TB is
 end entity FIFO_TB;
 
 architecture test of FIFO_TB is
@@ -22,7 +22,7 @@ architecture test of FIFO_TB is
   signal r_AE_Level : integer := 1;
   signal w_AF_Flag, w_AE_Flag, w_Full, w_Empty, w_Rd_DV : std_logic;
   signal w_Rd_Data : std_logic_vector(WIDTH-1 downto 0);
- 
+
   -- This procedure triggers a reset condition to the FIFO.
   procedure reset_fifo (
     signal r_Rst_L : out std_logic;
@@ -143,7 +143,7 @@ begin
     reset_fifo(r_Rst_L, r_Wr_DV, r_Rd_En);
     assert w_AE_Flag;
     assert not w_AF_Flag;
-    
+
     r_Wr_DV <= '1';
     wait until rising_edge(r_Clk);
     assert w_AE_Flag;
@@ -157,8 +157,8 @@ begin
     wait until rising_edge(r_Clk);
     assert not w_AE_Flag;
     assert w_AF_Flag;
-    assert w_Full;  
-    
+    assert w_Full;
+
     finish; -- need VHDL-2008
   end process;
 

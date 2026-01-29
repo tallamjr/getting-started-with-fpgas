@@ -19,4 +19,3 @@ program: $(TOP).bin
 
 clean:
 	rm -f $(TOP).json $(TOP).asc $(TOP).bin
-

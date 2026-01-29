@@ -35,7 +35,7 @@ begin
       i_Rd_En   => r_Rd_En,
       o_Rd_DV   => w_Rd_DV,
       o_Rd_Data => w_Rd_Data);
-  
+
   process is
   begin
     wait until r_Clock = '1';
@@ -52,7 +52,7 @@ begin
     -- Read out incrementing pattern
     r_Addr  <= (others => '0');
     r_Wr_DV <= '0';
-    
+
     for i in 0 to DEPTH-1 loop
       r_Rd_En <= '1';
       wait until r_Clock = '1';
@@ -65,5 +65,5 @@ begin
     wait until r_Clock = '1';
     finish;  -- Need VHDL-2008 for this to work correctly.
   end process;
-  
+
 end test;

@@ -2,7 +2,7 @@
 #-- Project file C:\Users\Russell\Desktop\fpga-book\chapter04\LED_Toggle_Project_Verilog\LED_Toggle_Project_Verilog_syn.prj
 #project files
 
-add_file -verilog -lib work "../LED_Toggle_Project.v" 
+add_file -verilog -lib work "../LED_Toggle_Project.v"
 add_file -constraint -lib work "../../Go_Board_Clock_Constraint.sdc"
 #implementation: "LED_Toggle_Project_Verilog_Implmnt"
 impl -add LED_Toggle_Project_Verilog_Implmnt -type fpga
@@ -15,7 +15,7 @@ set_option -project_relative_includes 1
 set_option -technology SBTiCE40
 set_option -part iCE40HX1K
 set_option -package VQ100
-set_option -speed_grade 
+set_option -speed_grade
 set_option -part_companion ""
 
 #compilation/mapping options
