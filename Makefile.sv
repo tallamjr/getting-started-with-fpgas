@@ -23,8 +23,13 @@
 
 # Configuration variables - MUST be specified on command line
 # Example: make -f Makefile.sv TOP=Module_Name SRC=path/to/file.sv
+# For multi-file designs: make -f Makefile.sv TOP=Module SRC=top.sv EXTRA_SRC="dep1.sv dep2.sv"
 TOP ?=
 SRC ?=
+EXTRA_SRC ?=
+
+# All source files (top-level + dependencies)
+ALL_SRC := $(SRC) $(EXTRA_SRC)
 
 # Board-specific defaults (GO Board)
 PCF ?= Go_Board_Pin_Constraints.pcf
@@ -32,12 +37,12 @@ DEVICE ?= hx1k
 PACKAGE ?= vq100
 
 # Validation - ensure required variables are set (only for targets that need them)
-# Targets that don't need TOP/SRC: clean, help, check-tools, check-slang
+# Targets that don't need TOP/SRC: clean, help, check-tools, check-slang, report-summary
 # If MAKECMDGOALS is empty, default target (all) needs validation
 ifeq ($(MAKECMDGOALS),)
   NEEDS_VALIDATION := true
 else
-  NEEDS_VALIDATION := $(filter-out clean help check-tools check-slang,$(MAKECMDGOALS))
+  NEEDS_VALIDATION := $(filter-out clean help check-tools check-slang report-summary,$(MAKECMDGOALS))
 endif
 
 ifneq ($(NEEDS_VALIDATION),)
@@ -55,6 +60,7 @@ BUILD_DIR := $(dir $(SRC))
 JSON := $(BUILD_DIR)$(PROJECT).json
 ASC := $(BUILD_DIR)$(PROJECT).asc
 BIN := $(BUILD_DIR)$(PROJECT).bin
+PNR_LOG := $(BUILD_DIR)$(PROJECT).pnr.log
 
 # Tool configuration
 # OSS CAD Suite includes yosys with the slang plugin pre-installed.
@@ -75,7 +81,8 @@ PROGRAMMER := openFPGALoader
 # Synthesis flags for yosys with slang plugin
 # read_slang reads SystemVerilog files using the slang frontend
 # synth_ice40 synthesises for iCE40 FPGAs and outputs JSON netlist
-SYNTH_FLAGS := -p "read_slang -top $(TOP) $(SRC); synth_ice40 -top $(TOP) -json $(JSON)"
+# ALL_SRC includes both the main source and any extra dependency files
+SYNTH_FLAGS := -p "read_slang -top $(TOP) $(ALL_SRC); synth_ice40 -top $(TOP) -json $(JSON)"
 
 # Place and route flags
 PNR_FLAGS := --$(DEVICE) --package $(PACKAGE) --json $(JSON) --asc $(ASC) --pcf $(PCF)
@@ -90,21 +97,23 @@ all: $(BIN)
 # Synthesis: SystemVerilog -> JSON netlist
 # yosys with slang plugin converts SystemVerilog to a netlist of iCE40 primitives
 # using the slang library for full SV2017/SV2023 parsing support
-$(JSON): $(SRC) $(PCF)
+$(JSON): $(ALL_SRC) $(PCF)
 	@echo "==> Synthesis: Converting SystemVerilog to JSON netlist"
 	@echo "    Top module: $(TOP)"
 	@echo "    Source: $(SRC)"
+	@if [ -n "$(EXTRA_SRC)" ]; then echo "    Dependencies: $(EXTRA_SRC)"; fi
 	@echo "    Using yosys with slang plugin for SystemVerilog frontend"
 	$(YOSYS_SLANG) $(SYNTH_FLAGS)
 	@echo "    Output: $(JSON)"
 
 # Place and Route: JSON -> ASCII configuration
 # nextpnr determines physical placement and routing on the FPGA
+# Output is captured to log file for report generation
 $(ASC): $(JSON) $(PCF)
 	@echo "==> Place and Route: Mapping netlist to physical FPGA resources"
 	@echo "    Device: $(DEVICE), Package: $(PACKAGE)"
 	@echo "    Constraints: $(PCF)"
-	$(NEXTPNR) $(PNR_FLAGS)
+	$(NEXTPNR) $(PNR_FLAGS) 2>&1 | tee $(PNR_LOG)
 	@echo "    Output: $(ASC)"
 
 # Bitstream Generation: ASCII -> Binary
@@ -112,9 +121,81 @@ $(ASC): $(JSON) $(PCF)
 $(BIN): $(ASC)
 	@echo "==> Bitstream Generation: Creating binary bitstream"
 	$(ICEPACK) $(ASC) $(BIN)
-	@echo "    Output: $(BIN) ($(shell ls -lh $(BIN) | awk '{print $$5}'))"
+	@echo "    Output: $(BIN) ($$(ls -lh $(BIN) | awk '{print $$5}'))"
+	@echo ""
+	@$(MAKE) -f Makefile.sv report-summary PNR_LOG=$(PNR_LOG) --no-print-directory
 	@echo ""
 	@echo "Build complete! Ready to program FPGA with: make -f Makefile.sv program"
+
+# Generate formatted resource utilisation report from nextpnr log
+.PHONY: report-summary
+report-summary:
+	@if [ -f "$(PNR_LOG)" ]; then \
+		echo ""; \
+		LC_LINE=$$(grep "ICESTORM_LC:" $(PNR_LOG) | head -1 | tr -s ' \t' ' '); \
+		LC_USED=$$(echo "$$LC_LINE" | sed 's/.*: *\([0-9]*\)\/.*/\1/'); \
+		LC_TOTAL=$$(echo "$$LC_LINE" | sed 's/.*\/  *\([0-9]*\) .*/\1/'); \
+		LC_PCT=$$(echo "$$LC_LINE" | sed 's/.*[^0-9]\([0-9]*\)%.*/\1/'); \
+		IO_LINE=$$(grep "SB_IO:" $(PNR_LOG) | head -1 | tr -s ' \t' ' '); \
+		IO_USED=$$(echo "$$IO_LINE" | sed 's/.*: *\([0-9]*\)\/.*/\1/'); \
+		IO_TOTAL=$$(echo "$$IO_LINE" | sed 's/.*\/  *\([0-9]*\) .*/\1/'); \
+		IO_PCT=$$(echo "$$IO_LINE" | sed 's/.*[^0-9]\([0-9]*\)%.*/\1/'); \
+		LUT4_ONLY=$$(grep "LCs used as LUT4 only" $(PNR_LOG) | sed 's/.*Info: *\([0-9]*\).*/\1/'); \
+		LUT4_DFF=$$(grep "LCs used as LUT4 and DFF" $(PNR_LOG) | sed 's/.*Info: *\([0-9]*\).*/\1/'); \
+		DFF_ONLY=$$(grep "LCs used as DFF only" $(PNR_LOG) | sed 's/.*Info: *\([0-9]*\).*/\1/'); \
+		CARRY_ONLY=$$(grep "LCs used as CARRY only" $(PNR_LOG) | sed 's/.*Info: *\([0-9]*\).*/\1/'); \
+		CARRY_LEGAL=$$(grep "LCs used to legalise" $(PNR_LOG) | sed 's/.*Info: *\([0-9]*\).*/\1/'); \
+		MAX_FREQ=$$(grep "Max frequency for clock" $(PNR_LOG) | head -1 | sed 's/.*: \([0-9.]*\) MHz.*/\1/'); \
+		TIMING_RESULT=$$(grep "Max frequency for clock" $(PNR_LOG) | head -1 | grep -o "(PASS\|FAIL[^)]*)" | tr -d '()'); \
+		TARGET_FREQ=$$(grep "Max frequency for clock" $(PNR_LOG) | head -1 | sed 's/.* at \([0-9.]*\) MHz.*/\1/'); \
+		echo "  Resource Utilisation Summary"; \
+		echo "  +---------------------------+------+-----------+-------------+"; \
+		echo "  |         Resource          | Used | Available | Utilisation |"; \
+		echo "  +---------------------------+------+-----------+-------------+"; \
+		printf "  | ICESTORM_LC (Logic Cells) | %4s | %9s | %3s%%        |\n" "$$LC_USED" "$$LC_TOTAL" "$$LC_PCT"; \
+		echo "  +---------------------------+------+-----------+-------------+"; \
+		printf "  | SB_IO (I/O Pins)          | %4s | %9s | %3s%%        |\n" "$$IO_USED" "$$IO_TOTAL" "$$IO_PCT"; \
+		echo "  +---------------------------+------+-----------+-------------+"; \
+		echo ""; \
+		echo "  Logic Cell Breakdown"; \
+		echo "  +--------------------------+-------+-------------------------------------------------+"; \
+		echo "  |           Type           | Count |                   Description                   |"; \
+		echo "  +--------------------------+-------+-------------------------------------------------+"; \
+		printf "  | LUT4 only                | %5s | Pure combinational logic                        |\n" "$$LUT4_ONLY"; \
+		echo "  +--------------------------+-------+-------------------------------------------------+"; \
+		printf "  | LUT4 + DFF               | %5s | Combined lookup table with flip-flop            |\n" "$$LUT4_DFF"; \
+		echo "  +--------------------------+-------+-------------------------------------------------+"; \
+		printf "  | DFF only                 | %5s | Pure sequential (register) logic                |\n" "$$DFF_ONLY"; \
+		echo "  +--------------------------+-------+-------------------------------------------------+"; \
+		printf "  | CARRY only               | %5s | Dedicated carry chain (for counters/arithmetic) |\n" "$$CARRY_ONLY"; \
+		echo "  +--------------------------+-------+-------------------------------------------------+"; \
+		printf "  | Carry chain legalisation | %5s | Additional LCs for carry routing                |\n" "$$CARRY_LEGAL"; \
+		echo "  +--------------------------+-------+-------------------------------------------------+"; \
+		echo ""; \
+		echo "  Timing Analysis"; \
+		echo "  +-------------------------+--------------------+"; \
+		echo "  |         Metric          |       Value        |"; \
+		echo "  +-------------------------+--------------------+"; \
+		printf "  | Max Clock Frequency     | %10s MHz     |\n" "$$MAX_FREQ"; \
+		echo "  +-------------------------+--------------------+"; \
+		printf "  | Target Clock            | %10s MHz     |\n" "$$TARGET_FREQ"; \
+		echo "  +-------------------------+--------------------+"; \
+		printf "  | Timing Result           | %-18s |\n" "$$TIMING_RESULT"; \
+		echo "  +-------------------------+--------------------+"; \
+		echo ""; \
+		TOTAL_DFF=$$((LUT4_DFF + DFF_ONLY)); \
+		if [ -n "$$MAX_FREQ" ] && [ -n "$$TARGET_FREQ" ]; then \
+			HEADROOM=$$(echo "scale=1; $$MAX_FREQ / $$TARGET_FREQ" | bc); \
+			echo "  * Insight ---------------------------------------------"; \
+			echo "  - $$TOTAL_DFF flip-flops total ($$LUT4_DFF combined LUT+DFF + $$DFF_ONLY DFF-only)"; \
+			echo "  - $$CARRY_ONLY carry cells are dedicated fast-carry chains for counters"; \
+			echo "  - $${MAX_FREQ} MHz max vs $${TARGET_FREQ} MHz target = $${HEADROOM}x timing headroom"; \
+			echo "  - $${LC_PCT}% LC utilisation leaves room for additional features"; \
+			echo "  -------------------------------------------------------"; \
+		fi; \
+	else \
+		echo "  No place-and-route log found. Run build first."; \
+	fi
 
 # Program FPGA with openFPGALoader
 .PHONY: program
@@ -134,6 +215,7 @@ info:
 	@echo "SystemVerilog FPGA Build Configuration:"
 	@echo "  Top Module:      $(TOP)"
 	@echo "  Source File:     $(SRC)"
+	@if [ -n "$(EXTRA_SRC)" ]; then echo "  Dependencies:    $(EXTRA_SRC)"; fi
 	@echo "  Build Dir:       $(BUILD_DIR)"
 	@echo "  Constraints:     $(PCF)"
 	@echo "  Device:          $(DEVICE)"
@@ -214,8 +296,8 @@ check-tools: check-slang
 .PHONY: clean
 clean:
 	@echo "Cleaning build artifacts..."
-	rm -f *.json *.asc *.bin
-	find chapter* -type f \( -name "*.json" -o -name "*.asc" -o -name "*.bin" \) -delete 2>/dev/null || true
+	rm -f *.json *.asc *.bin *.pnr.log
+	find chapter* -type f \( -name "*.json" -o -name "*.asc" -o -name "*.bin" -o -name "*.pnr.log" \) -delete 2>/dev/null || true
 	@echo "Clean complete"
 
 # Help target
@@ -240,14 +322,20 @@ help:
 	@echo "  SRC=file.sv       SystemVerilog source file path (REQUIRED)"
 	@echo ""
 	@echo "Optional Configuration:"
-	@echo "  PCF=file.pcf          Pin constraints file (default: $(PCF))"
-	@echo "  DEVICE=device         FPGA device (default: $(DEVICE))"
-	@echo "  PACKAGE=pkg           Package type (default: $(PACKAGE))"
-	@echo "  OSS_CAD_SUITE=path    OSS CAD Suite location (default: ~/oss-cad-suite)"
+	@echo "  EXTRA_SRC=\"f1.sv f2.sv\"  Additional dependency source files"
+	@echo "  PCF=file.pcf              Pin constraints file (default: $(PCF))"
+	@echo "  DEVICE=device             FPGA device (default: $(DEVICE))"
+	@echo "  PACKAGE=pkg               Package type (default: $(PACKAGE))"
+	@echo "  OSS_CAD_SUITE=path        OSS CAD Suite location (default: ~/oss-cad-suite)"
 	@echo ""
 	@echo "Examples:"
+	@echo "  # Simple single-file design:"
 	@echo "  make -f Makefile.sv TOP=Switches_To_LEDs SRC=chapter02/systemverilog/Switches_To_LEDs.sv"
-	@echo "  make -f Makefile.sv program TOP=Switches_To_LEDs SRC=chapter02/systemverilog/Switches_To_LEDs.sv"
+	@echo ""
+	@echo "  # Multi-file design with dependencies:"
+	@echo "  make -f Makefile.sv TOP=State_Machine_Project_Top \\"
+	@echo "    SRC=chapter08/State_Machine_Project_Verilog/systemverilog/State_Machine_Project_Top.sv \\"
+	@echo "    EXTRA_SRC=\"chapter08/.../Binary_To_7Segment.sv chapter05/.../Debounce_Filter.sv\""
 	@echo ""
 	@echo "Prerequisites:"
 	@echo "  1. OSS CAD Suite (includes yosys with slang, nextpnr-ice40, icepack)"
