@@ -74,50 +74,63 @@ Suggests some FPGA development boards that you can use for this book’s project
 
 Outlines strategies for finding an FPGA-related job, in case you want to pursue FPGA design professionally. I’ll make suggestions on how to build a good resume, prepare for interviews, and negotiate for the best-possible job offer.
 
------
+---
 
 # Tarek's Notes...
 
------
+---
 
 <!-- mtoc-start -->
 
-* [Getting Started with Open Source FPGA Tools](#getting-started-with-open-source-fpga-tools)
-  * [Why OSS CAD Suite?](#why-oss-cad-suite)
-  * [Installation](#installation)
-    * [1. Install openFPGALoader (for programming the FPGA)](#1-install-openfpgaloader-for-programming-the-fpga)
-    * [2. Download and Install OSS CAD Suite](#2-download-and-install-oss-cad-suite)
-    * [3. Activate the Toolchain](#3-activate-the-toolchain)
-    * [4. Verify Installation](#4-verify-installation)
-* [FPGA Development Workflow](#fpga-development-workflow)
-  * [Overview: Verilog → Bitstream → FPGA](#overview-verilog--bitstream--fpga)
-  * [Quick Start with Makefile](#quick-start-with-makefile)
-  * [Understanding Makefile Parameters](#understanding-makefile-parameters)
-    * [Why do we need both TOP and SRC?](#why-do-we-need-both-top-and-src)
-  * [Manual Workflow (for understanding)](#manual-workflow-for-understanding)
-    * [Step 1: Synthesis with Yosys](#step-1-synthesis-with-yosys)
-    * [Step 2: Place and Route with nextpnr-ice40](#step-2-place-and-route-with-nextpnr-ice40)
-    * [Step 3: Generate Bitstream with icepack](#step-3-generate-bitstream-with-icepack)
-    * [Step 4: Program the FPGA](#step-4-program-the-fpga)
-  * [Pin Constraints File](#pin-constraints-file)
-  * [Example: Building the Switches to LEDs Design](#example-building-the-switches-to-leds-design)
-* [Detailed Example: LED Toggle Project](#detailed-example-led-toggle-project)
-  * [Overview: What the Design Does](#overview-what-the-design-does)
-  * [Step-by-Step Build Process](#step-by-step-build-process)
-    * [1. Makefile Variable Resolution](#1-makefile-variable-resolution)
-    * [2. Stage 1: Synthesis with Yosys](#2-stage-1-synthesis-with-yosys)
-    * [3. Stage 2: Place and Route with nextpnr-ice40](#3-stage-2-place-and-route-with-nextpnr-ice40)
-    * [4. Stage 3: Bitstream Generation with icepack](#4-stage-3-bitstream-generation-with-icepack)
-    * [5. Stage 4: Programming with openFPGALoader](#5-stage-4-programming-with-openfpgaloader)
-  * [The Complete Flow Visualised](#the-complete-flow-visualised)
-  * [How the Makefile Orchestrates Dependencies](#how-the-makefile-orchestrates-dependencies)
-  * [Resource Utilisation](#resource-utilisation)
-  * [Testing Your Design](#testing-your-design)
-  * [Makefile Configuration](#makefile-configuration)
-  * [Key Points](#key-points)
+- [Getting Started with Open Source FPGA Tools](#getting-started-with-open-source-fpga-tools)
+  - [Why OSS CAD Suite?](#why-oss-cad-suite)
+  - [Installation](#installation)
+    - [1. Install openFPGALoader (for programming the FPGA)](#1-install-openfpgaloader-for-programming-the-fpga)
+    - [2. Download and Install OSS CAD Suite](#2-download-and-install-oss-cad-suite)
+    - [3. Activate the Toolchain](#3-activate-the-toolchain)
+    - [4. Verify Installation](#4-verify-installation)
+- [FPGA Development Workflow](#fpga-development-workflow)
+  - [Overview: Verilog → Bitstream → FPGA](#overview-verilog--bitstream--fpga)
+  - [Quick Start with Makefile](#quick-start-with-makefile)
+  - [Understanding Makefile Parameters](#understanding-makefile-parameters)
+    - [Why do we need both TOP and SRC?](#why-do-we-need-both-top-and-src)
+  - [Manual Workflow (for understanding)](#manual-workflow-for-understanding)
+    - [Step 1: Synthesis with Yosys](#step-1-synthesis-with-yosys)
+    - [Step 2: Place and Route with nextpnr-ice40](#step-2-place-and-route-with-nextpnr-ice40)
+    - [Step 3: Generate Bitstream with icepack](#step-3-generate-bitstream-with-icepack)
+    - [Step 4: Program the FPGA](#step-4-program-the-fpga)
+  - [Pin Constraints File](#pin-constraints-file)
+  - [Example: Building the Switches to LEDs Design](#example-building-the-switches-to-leds-design)
+- [Detailed Example: LED Toggle Project](#detailed-example-led-toggle-project)
+  - [Overview: What the Design Does](#overview-what-the-design-does)
+  - [Step-by-Step Build Process](#step-by-step-build-process)
+    - [1. Makefile Variable Resolution](#1-makefile-variable-resolution)
+    - [2. Stage 1: Synthesis with Yosys](#2-stage-1-synthesis-with-yosys)
+    - [3. Stage 2: Place and Route with nextpnr-ice40](#3-stage-2-place-and-route-with-nextpnr-ice40)
+    - [4. Stage 3: Bitstream Generation with icepack](#4-stage-3-bitstream-generation-with-icepack)
+    - [5. Stage 4: Programming with openFPGALoader](#5-stage-4-programming-with-openfpgaloader)
+  - [The Complete Flow Visualised](#the-complete-flow-visualised)
+  - [How the Makefile Orchestrates Dependencies](#how-the-makefile-orchestrates-dependencies)
+  - [Resource Utilisation](#resource-utilisation)
+  - [Testing Your Design](#testing-your-design)
+  - [Makefile Configuration](#makefile-configuration)
+  - [Key Points](#key-points)
+- [SystemVerilog Development Workflow](#systemverilog-development-workflow)
+  - [SystemVerilog vs Verilog: Key Differences](#systemverilog-vs-verilog-key-differences)
+  - [Directory Structure](#directory-structure)
+  - [Building SystemVerilog Projects](#building-systemverilog-projects)
+    - [Key Features of Makefile.sv](#key-features-of-makefilesv)
+    - [Quick Start](#quick-start)
+    - [Available Targets](#available-targets)
+  - [Build Flow: SystemVerilog to FPGA](#build-flow-systemverilog-to-fpga)
+  - [Example: State Machine in SystemVerilog](#example-state-machine-in-systemverilog)
+  - [Troubleshooting](#troubleshooting)
+    - ["yosys-slang not found"](#yosys-slang-not-found)
+    - [Homebrew yosys conflicts](#homebrew-yosys-conflicts)
+    - [Custom OSS CAD Suite location](#custom-oss-cad-suite-location)
+  - [SystemVerilog Files Summary](#systemverilog-files-summary)
 
 <!-- mtoc-end -->
-
 
 ## Getting Started with Open Source FPGA Tools
 
@@ -181,6 +194,7 @@ make check-tools
 ```
 
 You should see:
+
 - Yosys 0.58+ (synthesis)
 - nextpnr-ice40 0.9+ (place and route)
 - icepack (bitstream generation)
@@ -253,11 +267,13 @@ endmodule
 The synthesis tool (yosys) needs to know which module is the "top-level" entry point—in this case, `Top_Module`, not `Counter` or `Display`. The `TOP` parameter tells yosys which module to synthesize as the design root.
 
 **For this repository**: While each example file contains only one module (and the module name closely matches the filename), requiring both parameters ensures:
+
 - **Explicit specification**: You always know exactly which module and file you're building
 - **No surprises**: The Makefile won't build something unexpected using stale defaults
 - **Standard practice**: This follows typical FPGA development workflows where designs often span multiple files
 
 **In practice**: When building examples from this repository, the TOP parameter will match the module name in your Verilog file:
+
 - `TOP=Switches_To_LEDs` for the module `Switches_To_LEDs` in `chapter02/Switches_To_LEDs.v`
 - `TOP=LED_Toggle_Project` for the module `LED_Toggle_Project` in `chapter04/LED_Toggle_Project.v`
 
@@ -293,6 +309,7 @@ nextpnr-ice40 --hx1k --package vq100 \
 **What happens**: nextpnr reads the netlist and pin constraints, assigns each logic element to a physical location on the iCE40HX1K chip, and routes wires between them. It optimises for timing and resource usage.
 
 **Parameters**:
+
 - `--hx1k`: Target device (iCE40HX1K for GO Board)
 - `--package vq100`: Physical package type (100-pin VQFP)
 - `--pcf`: Pin constraints file mapping signals to physical pins
@@ -369,6 +386,7 @@ This section provides an in-depth walkthrough of building the LED Toggle example
 ### Overview: What the Design Does
 
 The LED Toggle design demonstrates sequential logic with flip-flops. Instead of directly connecting switches to LEDs (combinational logic), this design:
+
 - Detects when you **release** a button (falling edge detection)
 - **Toggles** the LED state on/off each time
 - **Remembers** the LED state between button presses using flip-flops
@@ -378,11 +396,13 @@ The LED Toggle design demonstrates sequential logic with flip-flops. Instead of 
 #### 1. Makefile Variable Resolution
 
 When you run:
+
 ```bash
 make TOP=LED_Toggle_Project SRC=chapter04/LED_Toggle_Project.v
 ```
 
 The Makefile processes:
+
 ```makefile
 TOP = LED_Toggle_Project                    # Your module name
 SRC = chapter04/LED_Toggle_Project.v        # Your Verilog file
@@ -397,11 +417,13 @@ The module name is converted to lowercase with dashes for consistent, filesystem
 #### 2. Stage 1: Synthesis with Yosys
 
 **Command executed:**
+
 ```bash
 yosys -p "synth_ice40 -top LED_Toggle_Project -json led-toggle-project.json" chapter04/LED_Toggle_Project.v
 ```
 
 **Input Verilog:**
+
 ```verilog
 module LED_Toggle_Project (input i_Clk, input i_Switch_1, output o_LED_1);
     reg r_LED_1 = 1'b0;
@@ -433,12 +455,14 @@ endmodule
    - Connects clock signal to flip-flop clock inputs
 
 **Output:** `led-toggle-project.json` (~332KB)
+
 - JSON netlist describing primitives and their connections
 - Contains cell types, parameters, and port connections
 
 #### 3. Stage 2: Place and Route with nextpnr-ice40
 
 **Command executed:**
+
 ```bash
 nextpnr-ice40 --hx1k --package vq100 \
   --json led-toggle-project.json \
@@ -449,6 +473,7 @@ nextpnr-ice40 --hx1k --package vq100 \
 **What nextpnr does:**
 
 **Step 2a: Reading inputs**
+
 - Reads JSON netlist (2 flip-flops, several LUTs, I/O connections)
 - Reads pin constraints:
   ```pcf
@@ -458,12 +483,14 @@ nextpnr-ice40 --hx1k --package vq100 \
   ```
 
 **Step 2b: Placement**
+
 - Assigns each logic cell to a physical location on the FPGA die
 - Tries to place related logic close together to minimize routing distance
 - Places flip-flops near I/O pins 53 and 56
 - Considers timing constraints (signal must propagate within clock period)
 
 **Step 2c: Routing**
+
 - Connects placed cells using the FPGA's programmable interconnect
 - Routes clock from pin 15 to both flip-flops' clock inputs
 - Routes switch input through edge detection logic to LED output
@@ -473,22 +500,26 @@ nextpnr-ice40 --hx1k --package vq100 \
 **Output:** `led-toggle-project.asc` (~181KB)
 
 ASCII text file describing:
+
 - Logic cell configurations (LUT equations, flip-flop enables)
 - Routing switch settings
 - I/O buffer configurations (pull-ups, drive strength)
 
 Example snippet:
+
 ```
 .logic_tile 7 8
 0010000000000000
 0000000100000000
 ...
 ```
+
 Each tile contains configuration bits for logic cells and local routing.
 
 #### 4. Stage 3: Bitstream Generation with icepack
 
 **Command executed:**
+
 ```bash
 icepack led-toggle-project.asc led-toggle-project.bin
 ```
@@ -505,9 +536,11 @@ icepack led-toggle-project.asc led-toggle-project.bin
 **Output:** `led-toggle-project.bin` (32KB)
 
 Bitstream header (first 16 bytes):
+
 ```
 ff00 00ff 7eaa 997e 5100 0105 9200 2062
 ```
+
 - `ff00 00ff`: Preamble (wakes up FPGA)
 - `7eaa 997e`: Sync pattern (configuration start marker)
 - Remaining: Configuration data and metadata
@@ -515,6 +548,7 @@ ff00 00ff 7eaa 997e 5100 0105 9200 2062
 #### 5. Stage 4: Programming with openFPGALoader
 
 **Command executed:**
+
 ```bash
 openFPGALoader -b ice40_generic led-toggle-project.bin
 ```
@@ -522,6 +556,7 @@ openFPGALoader -b ice40_generic led-toggle-project.bin
 **What happens:**
 
 **Step 4a: USB connection**
+
 ```
 Computer → USB → FTDI FT2232H Chip → SPI Bus → Flash Memory
                                               ↓
@@ -529,6 +564,7 @@ Computer → USB → FTDI FT2232H Chip → SPI Bus → Flash Memory
 ```
 
 **Step 4b: Flash programming sequence**
+
 1. **Detect board**: Identifies FTDI chip via USB
 2. **Read flash ID**: SPI command `0x9F` → Jedec ID `0x20` (Winbond flash)
 3. **Erase flash**: Sends sector erase commands (64KB region)
@@ -537,6 +573,7 @@ Computer → USB → FTDI FT2232H Chip → SPI Bus → Flash Memory
 6. **Reset FPGA**: Triggers `CRESET_B` pin to reconfigure
 
 **Step 4c: FPGA configuration**
+
 1. FPGA enters configuration mode
 2. Reads bitstream from flash via SPI
 3. Loads configuration into SRAM cells
@@ -585,6 +622,7 @@ $(JSON): $(SRC) $(PCF)         # JSON depends on Verilog source
 **Dependency resolution example:**
 
 When you run `make`:
+
 1. Make wants to build `led-toggle-project.bin`
 2. Checks if it exists and is newer than `led-toggle-project.asc`
 3. If ASC is missing or older, checks `led-toggle-project.json`
@@ -592,6 +630,7 @@ When you run `make`:
 5. Builds from bottom up: Verilog → JSON → ASC → BIN
 
 **Incremental builds:**
+
 - Edit only Verilog → Rebuilds JSON, ASC, BIN
 - Edit only PCF → Skips synthesis, rebuilds ASC and BIN
 - No changes → Make does nothing ("up to date")
@@ -601,6 +640,7 @@ This is the power of Make's dependency tracking!
 ### Resource Utilisation
 
 For this design, nextpnr reports:
+
 ```
 Device utilisation:
     ICESTORM_LC:       3/1280     0%    (Logic cells: 2 DFFs + 1 LUT)
@@ -640,23 +680,27 @@ resources your design needs.
 
 How nextpnr determines the numbers:
 
-1. Analyzes the netlist: nextpnr reads the *.json file from yosys which contains:
-  - All logic cells (LUTs, flip-flops)
-  - I/O pins needed
-  - Clock signals
-  - RAM blocks
-  - Special components (PLLs, etc.)
+1. Analyzes the netlist: nextpnr reads the \*.json file from yosys which contains:
+
+- All logic cells (LUTs, flip-flops)
+- I/O pins needed
+- Clock signals
+- RAM blocks
+- Special components (PLLs, etc.)
+
 2. Counts resource usage: It tallies up what the design requires
 3. Compares to device capacity: The iCE40HX1K has fixed resources:
-  - 1,280 logic cells (ICESTORM_LC) - each can be a LUT or flip-flop
-  - 112 I/O pins (SB_IO)
-  - 8 global clock buffers (SB_GB)
-  - 16 RAM blocks (ICESTORM_RAM)
-  - 1 PLL (ICESTORM_PLL)
+
+- 1,280 logic cells (ICESTORM_LC) - each can be a LUT or flip-flop
+- 112 I/O pins (SB_IO)
+- 8 global clock buffers (SB_GB)
+- 16 RAM blocks (ICESTORM_RAM)
+- 1 PLL (ICESTORM_PLL)
 
 ### Testing Your Design
 
 Once programmed:
+
 1. **Press Switch 1** → Nothing visible yet (design waits for release)
 2. **Release Switch 1** → LED 1 turns on (falling edge detected, state toggled)
 3. **Press and release again** → LED 1 turns off (toggled again)
@@ -695,3 +739,206 @@ make clean
 - **Fast iteration**: Synthesis + place & route typically completes in seconds for small designs
 - **Immediate results**: FPGA runs your design as soon as programming completes
 - **No FPGA vendor tools needed**: Unlike Xilinx Vivado or Intel Quartus, these tools are vendor-neutral
+
+## SystemVerilog Development Workflow
+
+This repository includes **SystemVerilog implementations** of all Verilog examples, located in `systemverilog/` subdirectories alongside the original Verilog code. SystemVerilog provides enhanced type safety, clearer intent through `always_ff`/`always_comb` blocks, and type-safe state machines with `enum`.
+
+### SystemVerilog vs Verilog: Key Differences
+
+| Verilog Construct         | SystemVerilog Equivalent       |
+| ------------------------- | ------------------------------ |
+| `wire` / `reg`            | `logic` (unified 4-state type) |
+| `always @(posedge clk)`   | `always_ff @(posedge clk)`     |
+| `always @(*)`             | `always_comb`                  |
+| `always @(level)` (latch) | `always_latch`                 |
+| `parameter NAME = val`    | `parameter int NAME = val`     |
+| `case (sel)`              | `unique case (sel)`            |
+
+### Directory Structure
+
+Each chapter contains a `systemverilog/` subdirectory:
+
+```
+chapter02/
+    Switches_To_LEDs.v           # Original Verilog
+    systemverilog/
+        Switches_To_LEDs.sv      # SystemVerilog equivalent
+
+chapter06/
+    Mux_Demux/
+        Mux_4_To_1.v
+        systemverilog/
+            Mux_4_To_1.sv
+    memory/
+        Verilog/
+            source/RAM_1Port.v
+        SystemVerilog/
+            source/RAM_1Port.sv
+```
+
+### Building SystemVerilog Projects
+
+SystemVerilog synthesis uses **yosys with the slang plugin**, which is included in the OSS CAD Suite. A dedicated `Makefile.sv` handles the build process.
+
+#### Key Features of Makefile.sv
+
+1. **Explicit tool paths** - Uses `$(OSS_CAD_SUITE)/bin/` prefix to avoid conflicts with Homebrew:
+
+   ```makefile
+   YOSYS := $(OSS_CAD_SUITE)/bin/yosys
+   YOSYS_SLANG := $(YOSYS) -m slang
+   NEXTPNR := $(OSS_CAD_SUITE)/bin/nextpnr-ice40
+   ICEPACK := $(OSS_CAD_SUITE)/bin/icepack
+   ```
+
+2. **Configurable OSS CAD Suite location** - Override with:
+
+   ```bash
+   make -f Makefile.sv OSS_CAD_SUITE=/custom/path TOP=... SRC=...
+   ```
+
+3. **Improved tool detection** - `check-slang` and `check-tools` verify binaries exist at expected paths
+
+#### Quick Start
+
+```bash
+# No need to source environment first - paths are explicit!
+
+# Verify toolchain is available
+make -f Makefile.sv check-tools
+
+# Build a SystemVerilog project
+make -f Makefile.sv TOP=Switches_To_LEDs SRC=chapter02/systemverilog/Switches_To_LEDs.sv
+
+# Program the FPGA
+make -f Makefile.sv program TOP=Switches_To_LEDs SRC=chapter02/systemverilog/Switches_To_LEDs.sv
+
+# Show build configuration
+make -f Makefile.sv info TOP=Switches_To_LEDs SRC=chapter02/systemverilog/Switches_To_LEDs.sv
+
+# Clean build artifacts
+make -f Makefile.sv clean
+```
+
+#### Available Targets
+
+| Target                                        | Description                      |
+| --------------------------------------------- | -------------------------------- |
+| `make -f Makefile.sv TOP=... SRC=...`         | Build bitstream                  |
+| `make -f Makefile.sv program TOP=... SRC=...` | Program FPGA with openFPGALoader |
+| `make -f Makefile.sv clean`                   | Remove all build artifacts       |
+| `make -f Makefile.sv info TOP=... SRC=...`    | Show build configuration         |
+| `make -f Makefile.sv check-tools`             | Verify all tools are installed   |
+| `make -f Makefile.sv check-slang`             | Verify slang plugin is available |
+| `make -f Makefile.sv help`                    | Show usage information           |
+
+### Build Flow: SystemVerilog to FPGA
+
+The SystemVerilog build pipeline mirrors the Verilog workflow but uses the slang frontend:
+
+```
+Switches_To_LEDs.sv                    SystemVerilog source
+         |
+    [yosys -m slang]                   Slang frontend parses SV2017/SV2023
+         |
+    [synth_ice40]                      Maps to iCE40 primitives
+         |
+switches-to-leds.json                  JSON netlist
+         |
+    [nextpnr-ice40]                    Place and route
+         |
+switches-to-leds.asc                   ASCII configuration
+         |
+    [icepack]                          Binary encoding
+         |
+switches-to-leds.bin                   32KB bitstream
+         |
+    [openFPGALoader]                   Program FPGA
+         |
+    FPGA Running!
+```
+
+### Example: State Machine in SystemVerilog
+
+The state machine game (Chapter 8) demonstrates SystemVerilog's enhanced state machine syntax:
+
+```systemverilog
+// Type-safe state encoding with enum
+typedef enum logic [2:0] {
+    START       = 3'b000,
+    PATTERN_OFF = 3'b001,
+    PATTERN_SHOW= 3'b010,
+    WAIT_PLAYER = 3'b011,
+    INCR_SCORE  = 3'b100,
+    LOSER       = 3'b101,
+    WINNER      = 3'b110
+} state_t;
+
+state_t r_State, w_Next_State;
+
+// Sequential logic - explicitly flip-flops
+always_ff @(posedge i_Clk) begin
+    r_State <= w_Next_State;
+end
+
+// Combinational logic - explicitly no latches
+always_comb begin
+    w_Next_State = r_State;  // Default: hold state
+
+    unique case (r_State)
+        START: begin
+            if (w_Any_Button_Pressed)
+                w_Next_State = PATTERN_OFF;
+        end
+        // ... other states
+    endcase
+end
+```
+
+### Troubleshooting
+
+#### "yosys-slang not found"
+
+The slang plugin is included in OSS CAD Suite's yosys, not as a standalone binary. The `Makefile.sv` uses explicit paths to avoid this issue:
+
+```bash
+# This will fail (looking for standalone binary)
+yosys-slang ...
+
+# This is correct (plugin mode)
+~/oss-cad-suite/bin/yosys -m slang ...
+```
+
+#### Homebrew yosys conflicts
+
+If you have both Homebrew yosys and OSS CAD Suite installed, Homebrew's yosys may take precedence and lacks the slang plugin. The `Makefile.sv` avoids this by using explicit paths:
+
+```bash
+# Always uses OSS CAD Suite yosys, regardless of PATH
+make -f Makefile.sv check-tools
+```
+
+#### Custom OSS CAD Suite location
+
+If OSS CAD Suite is installed elsewhere:
+
+```bash
+make -f Makefile.sv OSS_CAD_SUITE=/opt/oss-cad-suite TOP=... SRC=...
+```
+
+### SystemVerilog Files Summary
+
+| Chapter   | Files | Key Modules                                        |
+| --------- | ----- | -------------------------------------------------- |
+| chapter02 | 1     | Switches_To_LEDs                                   |
+| chapter03 | 1     | And_Gate_Project                                   |
+| chapter04 | 2     | LED_Toggle_Project, Latch                          |
+| chapter05 | 4     | Debounce_Filter, Debounce_Project_Top, testbenches |
+| chapter06 | 17    | Mux, Demux, LFSR, RAM, FIFO, project tops          |
+| chapter07 | 1     | timing_error                                       |
+| chapter08 | 5     | State_Machine_Game, Binary_To_7Segment, Turnstile  |
+| chapter10 | 1     | math_examples                                      |
+| external  | 1     | top (seg_decoder)                                  |
+
+**Total: 33 SystemVerilog files** providing complete coverage of all Verilog examples
